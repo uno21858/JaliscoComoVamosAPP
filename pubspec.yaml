@@ -1,0 +1,43 @@
+name: jcv_app
+description: App móvil de Jalisco Cómo Vamos. Reto Tec ago-dic 2026, equipo LinuxVSWindows.
+publish_to: "none"
+version: 0.1.0+1
+
+environment:
+  sdk: ">=3.6.0 <4.0.0"
+  flutter: ">=3.29.0"
+
+# Rangos amplios a propósito: pub elige la versión más nueva que sea
+# compatible con el Flutter que tenga cada quien en su máquina.
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  cupertino_icons: ">=1.0.8 <3.0.0"
+  flutter_secure_storage: ">=9.2.2 <12.0.0"
+  go_router: ">=14.8.0 <19.0.0"
+  provider: ^6.1.2
+
+dev_dependencies:
+  flutter_lints: ">=5.0.0 <7.0.0"
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true
+  fonts:
+    - family: Montserrat
+      fonts:
+        - asset: assets/fonts/Montserrat-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Montserrat-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Montserrat-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Montserrat-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/Montserrat-ExtraBold.ttf
+          weight: 800
+        - asset: assets/fonts/Montserrat-Black.ttf
+          weight: 900
