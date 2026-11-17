@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jcv_app/core/app_error.dart';
+import 'package:jcv_app/services/local/device_id.dart';
 import 'package:jcv_app/services/supabase/supabase_assistant_service.dart';
 
 void main() {

@@ -2,7 +2,7 @@
 
 App móvil (Flutter, iOS y Android) del reto ago-dic 2026 con Jalisco Cómo Vamos. Equipo LinuxVSWindows, grupo 502, Tec GDL.
 
-**Estado: fase 2.** Están las 34 pantallas del wireflow con navegación real. **Datos y el asistente ya usan la base real** de la Encuesta de Bienestar de Jóvenes AMG 2026 (Supabase + Claude Haiku). Encuestas y Donar siguen en mock. No hay login.
+**Estado: fase 2.** Están las 34 pantallas del wireflow con navegación real. **Datos, Encuestas y el asistente ya usan la base real** de la Encuesta de Bienestar de Jóvenes AMG 2026 (Supabase + Claude Haiku). Donar sigue en mock. No hay login.
 
 ## Correr la app
 
@@ -56,6 +56,15 @@ Vive en el proyecto Supabase de **CCL DEV**, aislado en el schema `jcv` (expuest
 - **Caché:** el system prompt se cachea en Anthropic y las preguntas repetidas sin historial salen de `jcv.cache_respuestas`. Si cambias prompt, modelo o datos, sube `CACHE_VERSION` en la función.
 - **Bitácora:** cada pregunta queda en `jcv.bitacora`, anónima (IP y dispositivo con hash).
 
+## Encuestas del Tec
+
+Una encuesta por temática con **las mismas preguntas y opciones del AMG** que salen en Datos (`lib/services/supabase/graficas_destacadas.dart`), para que las respuestas se puedan comparar. Edad (18 a 29), sexo y municipio se preguntan una vez y se guardan en el teléfono; el estrato no se pregunta.
+
+- `jcv.guardar_encuesta` (v1.05) valida cada respuesta contra el catálogo y las guarda como fuente `TEC`. La marca de "ya contestó" va en otra tabla, sin ligarse a las respuestas (RF-ENC-09).
+- Una vez por encuesta y por teléfono, y máximo 300 envíos por hora por IP. Sin login, reinstalando la app se podría contestar otra vez.
+- La comparativa AMG vs Tec aparece sola cuando una pregunta junta 30 respuestas del Tec.
+
+
 **Barrels:** uno por capa (`core/core.dart`, `models/models.dart`, `repositories/repositories.dart`, `providers/providers.dart`, `widgets/widgets.dart`). Las pantallas importan barrels; dentro de una misma carpeta se importa el archivo directo para no crear ciclos.
 
 ## Reglas del proyecto
@@ -99,7 +108,7 @@ Fuera por ahora, porque dependen del login: 3.1 Acceso, 3.2 Registro bloqueado, 
 - **2.10 Sin conexión:** en `main_dev.dart` pon `mockFailureRate: 0.3` en `FlavorConfig`.
 - **4.6 Pago rechazado:** en la hoja de pago, "Simular pago rechazado" (solo en dev).
 - **Retomar encuesta:** responde unas preguntas, toca "Guardar y salir" y regresa a Encuestas.
-- La encuesta de Transporte arranca como completada para ver ese estado.
+- Encuesta ya contestada: con Supabase, contéstala y vuelve a la lista (sale como completada). Con mocks, Transporte arranca completada.
 
 Los números son sintéticos. En dev aparece la etiqueta "Datos de ejemplo" para que nadie los confunda con resultados reales en una demo.
 
@@ -114,7 +123,7 @@ Los números son sintéticos. En dev aparece la etiqueta "Datos de ejemplo" para
 ## Siguientes fases
 
 1. Auth con AWS Cognito (pantallas 3.1 a 3.3 y 4.2), con el mismo patrón de CCL: tokens en `flutter_secure_storage`, interceptor de refresh y lambda pre-token-generation.
-2. Encuestas del Tec con las mismas preguntas del AMG (`lib/services/supabase/graficas_destacadas.dart`), guardadas como fuente Tec para que aparezca la comparativa. Donativos a Supabase. Con login, los RPC validan al usuario con `validate_caller` como en CCL.
+2. Donativos con Stripe; con login, los RPC validan al usuario con `validate_caller` como en CCL y las encuestas pasan de "una vez por teléfono" a "una vez por persona".
 3. Stripe: decidir PaymentSheet dentro de la app contra Checkout en el navegador (RF-DON-01 y la regla 3.2.2 de App Store).
 4. Voz del asistente: `speech_to_text` con `onDevice: true` (hoy es mock).
 5. Informe PDF y compartir.

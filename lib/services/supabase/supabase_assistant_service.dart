@@ -8,6 +8,7 @@ import '../../core/error_sanitizer.dart';
 import '../../core/result.dart';
 import '../../models/models.dart';
 import '../../repositories/assistant_repository.dart';
+import '../local/device_id.dart';
 import '../local/local_store.dart';
 
 /// Asistente real: llama a la Edge Function jcv-asistente (supabase/jcv-asistente).
@@ -20,7 +21,6 @@ class SupabaseAssistantService implements AssistantRepository {
   String? _deviceId;
 
   static const _function = 'jcv-asistente';
-  static const _deviceKey = 'jcv_dispositivo';
   static const _maxHistory = 6;
   static const _timeout = Duration(seconds: 30);
 
@@ -86,29 +86,5 @@ class SupabaseAssistantService implements AssistantRepository {
     );
   }
 
-  /// Id aleatorio del teléfono para el límite de 20 preguntas al día.
-  /// No identifica a la persona; el servidor solo guarda su hash.
-  Future<String> _device() async {
-    final cached = _deviceId;
-    if (cached != null) return cached;
-    final stored = await _store.read(_deviceKey);
-    if (stored != null && uuidPattern.hasMatch(stored)) return _deviceId = stored;
-    final id = newDeviceId();
-    await _store.write(_deviceKey, id); // si falla, dura lo que dure la sesión
-    return _deviceId = id;
-  }
-}
-
-final uuidPattern =
-    RegExp(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$');
-
-/// UUID v4 con Random.secure. ponytail: no vale un paquete por 6 líneas.
-String newDeviceId([Random? random]) {
-  final r = random ?? Random.secure();
-  final bytes = List<int>.generate(16, (_) => r.nextInt(256));
-  bytes[6] = (bytes[6] & 0x0f) | 0x40; // versión 4
-  bytes[8] = (bytes[8] & 0x3f) | 0x80; // variante RFC 4122
-  final hex = bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
-  return '${hex.substring(0, 8)}-${hex.substring(8, 12)}-${hex.substring(12, 16)}-'
-      '${hex.substring(16, 20)}-${hex.substring(20)}';
+  Future<String> _device() async => _deviceId ??= await deviceId(_store);
 }

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:supabase/supabase.dart';
 
@@ -95,7 +96,12 @@ class SupabaseDataService implements DataRepository {
           for (final d in defs)
             if (buildChart(d, data, source) case final chart?) chart,
         ];
-        return Enough(TopicCharts(charts: charts, n: count.count));
+        if (fuente == 'AMG') return Enough(TopicCharts(charts: charts, n: count.count));
+        // Tec: cada encuesta contestada cuenta como una persona aparte (no se ligan,
+        // RF-ENC-09), así que el total de personas sale inflado. La n real es la
+        // de las gráficas, y si ninguna llega al umbral no hay nada que mostrar.
+        if (charts.isEmpty) return TooFew<TopicCharts>(count.threshold);
+        return Enough(TopicCharts(charts: charts, n: charts.map((c) => c.n).reduce(max)));
       });
 
   @override
@@ -116,9 +122,15 @@ class SupabaseDataService implements DataRepository {
         if (amgCount.belowThreshold) return TooFew<ComparisonData>(amgCount.threshold);
         final charts = [
           for (final d in defs)
-            if (buildComparison(d, amg, tec, amgCount.count, tecCount.count) case final chart?) chart,
+            if (buildComparison(d, amg, tec) case final chart?) chart,
         ];
-        return Enough(ComparisonData(charts: charts, nAmg: amgCount.count, nTec: tecCount.count));
+        // Igual que en getTopicCharts: la n del Tec sale de las gráficas.
+        if (charts.isEmpty) return TooFew<ComparisonData>(tecCount.threshold);
+        return Enough(ComparisonData(
+          charts: charts,
+          nAmg: amgCount.count,
+          nTec: charts.map((c) => c.nTec).reduce(max),
+        ));
       });
 
   @override
@@ -204,8 +216,6 @@ class SupabaseDataService implements DataRepository {
     ChartDef def,
     Map<String, GraficaJson> amg,
     Map<String, GraficaJson> tec,
-    int nAmg,
-    int nTec,
   ) {
     final a = [for (final v in def.variables) amg[v]];
     final t = [for (final v in def.variables) tec[v]];
@@ -228,8 +238,8 @@ class SupabaseDataService implements DataRepository {
       topicId: def.topicId,
       title: def.title,
       rows: rows,
-      nAmg: nAmg,
-      nTec: nTec,
+      nAmg: _n(a.first!),
+      nTec: _n(t.first!),
       summary: Summaries.comparison(rows),
     );
   }

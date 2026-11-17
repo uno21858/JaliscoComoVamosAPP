@@ -6,10 +6,18 @@ import '../../models/chart.dart';
 /// - Una variable: la pregunta con todas sus respuestas.
 /// - Varias variables (grupo): una barra por variable con el porcentaje de las
 ///   respuestas en [codes] ("Sí" = [1]; "algo o mucho" = [4, 5]).
+///
+/// La encuesta del Tec usa la misma lista (mismas preguntas y opciones del AMG):
+/// - Grupo Sí/No: una pregunta de opción múltiple con [surveyStem].
+/// - Grupo de escala: una pregunta por inciso. Si [surveyStem] trae `{item}`
+///   se arma la pregunta con el inciso; si no, el stem va como ayuda.
 class ChartDef {
-  const ChartDef(this.id, this.topicId, this.title, this.variables, {this.subtitle})
+  const ChartDef(this.id, this.topicId, this.title, this.variables,
+      {this.subtitle, this.surveyText, this.surveyHelper})
       : codes = const [],
-        labels = const [];
+        labels = const [],
+        surveyStem = null,
+        exclusive = null;
 
   const ChartDef.group(
     this.id,
@@ -19,7 +27,11 @@ class ChartDef {
     required this.codes,
     required this.labels,
     required this.subtitle,
-  }) : assert(variables.length == labels.length);
+    required this.surveyStem,
+    this.exclusive,
+  })  : surveyText = null,
+        surveyHelper = null,
+        assert(variables.length == labels.length);
 
   final String id;
   final String topicId;
@@ -28,8 +40,21 @@ class ChartDef {
   final List<String> variables;
   final List<int> codes;
   final List<String> labels;
+  final String? surveyStem;
+
+  /// Pregunta sola: texto para la encuesta cuando el del diccionario no sirve
+  /// tal cual (Q_41 viene cortado a 256 caracteres desde SPSS).
+  final String? surveyText;
+  final String? surveyHelper;
+
+  /// Grupo Sí/No: el inciso que excluye a los demás ("Ninguna…"). Si es null,
+  /// la encuesta agrega su propio "Ninguna".
+  final String? exclusive;
 
   bool get isGroup => variables.length > 1;
+
+  /// "¿Cuáles…?" con respuestas Sí (1) / No (2) por inciso.
+  bool get isYesNoGroup => isGroup && codes.length == 1 && codes.first == 1;
 }
 
 /// "T_Q_65_" + 3 -> T_Q_65_1, T_Q_65_2, T_Q_65_3.
@@ -47,7 +72,8 @@ final graficasDestacadas = <ChartDef>[
   ChartDef.group('bienestar-emociones', 'bienestar', 'Cómo se sienten seguido', _items('T_Q_11_', 6),
       codes: _algoOMucho,
       labels: const ['Contentos', 'Tranquilos', 'Angustiados', 'Tristes', 'Enojados', 'Problemas para dormir'],
-      subtitle: '% que lo siente muchas veces o siempre'),
+      subtitle: '% que lo siente muchas veces o siempre',
+      surveyStem: '¿Con qué frecuencia {item}?'),
   const ChartDef('bienestar-afectiva', 'bienestar', 'Satisfacción con su vida afectiva', ['Q_10']),
 
   // Educación y trabajo
@@ -60,7 +86,8 @@ final graficasDestacadas = <ChartDef>[
         'Trabajo del hogar sin pago',
         'Cuida a alguien en casa',
       ],
-      subtitle: '% que lo hace a diario o de forma regular'),
+      subtitle: '% que lo hace a diario o de forma regular',
+      surveyStem: '¿Cuáles de estas actividades haces a diario o de forma regular?'),
   const ChartDef('educacion-escolaridad', 'educacion-trabajo', 'Nivel de escolaridad', ['Q_74recode']),
   const ChartDef('educacion-universidad', 'educacion-trabajo', 'Importancia de la universidad hoy', ['Q_17']),
   const ChartDef('educacion-satisfaccion', 'educacion-trabajo', 'Satisfacción con sus actividades diarias', ['Q_14']),
@@ -70,7 +97,8 @@ final graficasDestacadas = <ChartDef>[
   ChartDef.group('tiempo-actividades', 'tiempo-libre', 'Qué hicieron en los últimos 3 meses', _items('T_Q_23_', 7),
       codes: _algoOMucho,
       labels: const ['Cine', 'Leer', 'Deporte', 'Arte', 'Amigos o familia', 'Videojuegos', 'Streaming'],
-      subtitle: '% con cierta o mucha frecuencia'),
+      subtitle: '% con cierta o mucha frecuencia',
+      surveyStem: 'En los últimos 3 meses, ¿con qué frecuencia hiciste esto?'),
   const ChartDef('tiempo-ia', 'tiempo-libre', 'Uso de chatbots de IA', ['Q_25']),
   ChartDef.group('tiempo-mundial', 'tiempo-libre', 'Cómo vivieron el Mundial', _items('Q_29_', 9),
       codes: _si,
@@ -85,7 +113,9 @@ final graficasDestacadas = <ChartDef>[
         'Otra',
         'No lo siguió',
       ],
-      subtitle: '% que lo hizo'),
+      subtitle: '% que lo hizo',
+      surveyStem: 'Durante el Mundial, ¿en cuáles de estas participaste?',
+      exclusive: 'Q_29_9'),
 
   // Hogar y familia
   const ChartDef('hogar-familia', 'hogar-familia', 'Satisfacción con su vida familiar', ['Q_31']),
@@ -96,20 +126,27 @@ final graficasDestacadas = <ChartDef>[
 
   // Salud
   const ChartDef('salud-satisfaccion', 'salud', 'Satisfacción con su salud', ['Q_36']),
-  const ChartDef('salud-mental', 'salud', 'Cómo califican su salud mental', ['Q_41']),
+  const ChartDef('salud-mental', 'salud', 'Cómo califican su salud mental', ['Q_41'],
+      surveyText: '¿Cómo calificarías tu salud mental?',
+      surveyHelper: 'Es tu bienestar emocional: tu estado de ánimo en el día a día, si te sientes '
+          'tranquila(o) y contenta(o), o si vives ansiedad, tristeza, angustia o estrés.'),
   const ChartDef('salud-ejercicio', 'salud', 'Días de ejercicio a la semana', ['Q_39']),
   const ChartDef('salud-alcohol', 'salud', 'Días que toman alcohol a la semana', ['Q_38']),
   const ChartDef('salud-drogas', 'salud', 'Qué tan fácil es conseguir drogas', ['Q_37']),
 
   // Seguridad
   ChartDef.group('seguridad-percepcion', 'seguridad', 'Se sienten seguros viviendo en…', _items('T_Q_43_', 2),
-      codes: _algoOMucho, labels: const ['Su ciudad', 'Su colonia'], subtitle: '% algo o muy seguro'),
+      codes: _algoOMucho,
+      labels: const ['Su ciudad', 'Su colonia'],
+      subtitle: '% algo o muy seguro',
+      surveyStem: '¿Qué tan seguro es vivir en tu {item}?'),
   const ChartDef('seguridad-amenaza', 'seguridad', 'Se sienten amenazados por la violencia en su colonia', ['Q_45']),
   const ChartDef('seguridad-victimas', 'seguridad', 'Víctimas de un delito', ['Q_46'], subtitle: 'Últimos 12 meses'),
   ChartDef.group('seguridad-colonia', 'seguridad', 'Problemas graves en su colonia', _items('T_Q_44_', 4),
       codes: _algoOMucho,
       labels: const ['Asaltos y robos', 'Drogas', 'Pleitos y violencia', 'Detenciones arbitrarias'],
-      subtitle: '% algo o muy grave'),
+      subtitle: '% algo o muy grave',
+      surveyStem: 'En tu colonia, ¿qué tan grave es esto?'),
   const ChartDef('seguridad-crimen', 'seguridad', 'Presencia del crimen organizado', ['Q_49']),
 
   // Comunidad
@@ -132,7 +169,8 @@ final graficasDestacadas = <ChartDef>[
         'Jueces',
         'Empresarios',
       ],
-      subtitle: '% algo o mucha confianza'),
+      subtitle: '% algo o mucha confianza',
+      surveyStem: '¿Cuánta confianza tienes en {item}?'),
   ChartDef.group('comunidad-discriminacion', 'comunidad', 'Discriminación en el último año', _items('T_Q_63_', 11),
       codes: _si,
       labels: const [
@@ -148,7 +186,8 @@ final graficasDestacadas = <ChartDef>[
         'Origen étnico',
         'Color de piel',
       ],
-      subtitle: '% que la vivió, por motivo'),
+      subtitle: '% que la vivió, por motivo',
+      surveyStem: 'En los últimos 12 meses, ¿por cuáles de estos motivos te han discriminado?'),
   ChartDef.group('comunidad-participacion', 'comunidad', 'Participación en el último año', _items('T_Q_60_', 7),
       codes: _si,
       labels: const [
@@ -160,7 +199,8 @@ final graficasDestacadas = <ChartDef>[
         'Colectivos ciudadanos',
         'Causas globales',
       ],
-      subtitle: '% que participó'),
+      subtitle: '% que participó',
+      surveyStem: 'En los últimos 12 meses, ¿en cuáles de estas participaste?'),
   const ChartDef('comunidad-politica', 'comunidad', 'Interés en la política', ['Q_66']),
   const ChartDef('comunidad-democracia', 'comunidad', 'Opinión sobre la democracia', ['Q_67']),
   const ChartDef('comunidad-redes', 'comunidad', 'Red social para informarse de política', ['Q_68']),
