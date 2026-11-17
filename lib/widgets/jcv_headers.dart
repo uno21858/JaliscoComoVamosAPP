@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
+import '../core/router/app_routes.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/app_text_styles.dart';
 import 'jcv_brand.dart';
@@ -98,8 +99,9 @@ class ScreenHeader extends StatelessWidget {
   final VoidCallback? onLeading;
   final Widget? trailing;
 
+  /// Sin nada abajo (deep link o recarga en dev), regresa a Inicio.
   void _defaultLeading(BuildContext context) {
-    if (context.canPop()) context.pop();
+    context.canPop() ? context.pop() : context.go(AppRoutes.home);
   }
 
   @override

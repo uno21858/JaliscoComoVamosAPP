@@ -32,7 +32,7 @@ class SurveyThanksScreen extends StatelessWidget {
           source: DataSource.comparison,
           filters: DataFilters.none,
         );
-    context.go(AppRoutes.comparison(topicId));
+    context.pushReplacement(AppRoutes.comparison(topicId));
   }
 
   @override

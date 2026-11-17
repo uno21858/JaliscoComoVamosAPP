@@ -121,7 +121,7 @@ class _ChartsList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView(
-      padding: const EdgeInsets.only(top: 14, bottom: 24),
+      padding: EdgeInsets.only(top: 14, bottom: 24 + MediaQuery.paddingOf(context).bottom),
       children: [
         pills,
         const SizedBox(height: 14),

@@ -39,7 +39,7 @@ class _Success extends StatelessWidget {
   Widget build(BuildContext context) {
     final amount = Money.format(receipt.amountCents);
     return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 34, 20, 24),
+      padding: EdgeInsets.fromLTRB(20, 34, 20, 24 + MediaQuery.paddingOf(context).bottom),
       children: [
         const Center(
           child: IconCircle(

@@ -62,7 +62,7 @@ class _ReportScreenState extends State<ReportScreen> {
           const ScreenHeader(title: 'Generar informe'),
           Expanded(
             child: ListView(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+              padding: EdgeInsets.fromLTRB(20, 16, 20, 24 + MediaQuery.paddingOf(context).bottom),
               children: [
                 const Text(
                   'Elige qué incluir y te armamos un PDF con gráficas y resúmenes sencillos.',

@@ -3,25 +3,29 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/router/app_routes.dart';
 import '../../widgets/widgets.dart';
+import '../data/topics_screen.dart';
+import '../donate/donate_screen.dart';
+import '../home/home_screen.dart';
+import '../surveys/survey_list_screen.dart';
 
-/// Contenedor de las 4 pestañas. Cada pestaña conserva su propia pila.
+/// Las 4 pestañas, como MainScreen de CCL. La activa viene de ?tab= y el
+/// IndexedStack las mantiene vivas: cambiar de pestaña no pierde scroll ni datos.
 class MainShell extends StatelessWidget {
-  const MainShell({super.key, required this.navigationShell});
+  const MainShell({super.key, required this.tab});
 
-  final StatefulNavigationShell navigationShell;
-
-  void _onTab(int index) {
-    // Tocar la pestaña activa regresa al inicio de su flujo.
-    navigationShell.goBranch(index, initialLocation: index == navigationShell.currentIndex);
-  }
+  /// 0 Inicio, 1 Datos, 2 Encuestas, 3 Donar.
+  final int tab;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: navigationShell,
+      body: IndexedStack(
+        index: tab,
+        children: const [HomeScreen(), TopicsScreen(), SurveyListScreen(), DonateScreen()],
+      ),
       bottomNavigationBar: JcvTabBar(
-        currentIndex: navigationShell.currentIndex,
-        onTap: _onTab,
+        currentIndex: tab,
+        onTap: (index) => context.go(AppRoutes.tabs[index]),
         onAssistant: () => context.push(AppRoutes.assistant),
       ),
     );

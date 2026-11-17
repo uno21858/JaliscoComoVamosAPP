@@ -77,10 +77,10 @@ class _DonateViewState extends State<_DonateView> {
 
     final receipt = await controller.fetchReceipt(intent.id);
     if (!mounted || receipt == null) return;
-    context.go(
+    unawaited(context.push(
       receipt.status == DonationStatus.paid ? AppRoutes.donationSuccess : AppRoutes.donationFailed,
       extra: receipt,
-    );
+    ));
   }
 
   @override

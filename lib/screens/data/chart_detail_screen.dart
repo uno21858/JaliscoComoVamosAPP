@@ -77,7 +77,7 @@ class _DetailView extends StatelessWidget {
           final meta = '${source.longLabel} · ${filters.filters.ageLabel} · '
               'n = ${Formatters.thousands(chart.n)}';
           return ListView(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+            padding: EdgeInsets.fromLTRB(20, 16, 20, 24 + MediaQuery.paddingOf(context).bottom),
             children: [
               Align(
                 alignment: Alignment.centerLeft,

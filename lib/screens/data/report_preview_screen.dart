@@ -55,7 +55,7 @@ class _ReportPreviewScreenState extends State<ReportPreviewScreen> {
           const ScreenHeader(title: 'Vista previa'),
           Expanded(
             child: ListView(
-              padding: const EdgeInsets.only(top: 18, bottom: 24),
+              padding: EdgeInsets.only(top: 18, bottom: 24 + MediaQuery.paddingOf(context).bottom),
               children: [
                 SizedBox(
                   height: 370,

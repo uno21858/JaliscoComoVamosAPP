@@ -14,7 +14,7 @@ class SurveyDraft {
   /// Pregunta donde se quedó, empezando en 0.
   final int currentIndex;
 
-  /// Respuestas por id de pregunta: int, String o List<String>.
+  /// Respuestas por id de pregunta: int, String o `List<String>`.
   final Map<String, Object> answers;
   final DateTime updatedAt;
 

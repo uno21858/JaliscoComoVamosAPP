@@ -289,7 +289,7 @@ class _HighlightCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
-          onTap: () => context.go(AppRoutes.chart(highlight.topicId, highlight.chartId)),
+          onTap: () => context.push(AppRoutes.chart(highlight.topicId, highlight.chartId)),
           child: Padding(
             padding: const EdgeInsets.all(18),
             child: Column(

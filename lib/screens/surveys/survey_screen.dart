@@ -106,7 +106,7 @@ class _SurveyScreenState extends State<SurveyScreen> {
     switch (outcome) {
       case SubmitOutcome.sent:
         unawaited(context.read<SurveysProvider>().load(silent: true));
-        context.go(AppRoutes.surveyThanks(widget.surveyId));
+        context.pushReplacement(AppRoutes.surveyThanks(widget.surveyId));
       case SubmitOutcome.alreadyCompleted:
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(controller.submitError ?? 'Ya respondiste esta encuesta.')),
