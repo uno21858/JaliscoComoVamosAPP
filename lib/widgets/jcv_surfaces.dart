@@ -317,7 +317,9 @@ class MockDataBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (!FlavorConfig.instance.showMockBanner) return const SizedBox.shrink();
+    // Con Supabase, Datos y el asistente son reales: el aviso ya no aplica.
+    final config = FlavorConfig.instance;
+    if (!config.showMockBanner || config.hasSupabase) return const SizedBox.shrink();
     return Padding(
       padding: padding,
       child: NoticeBox(

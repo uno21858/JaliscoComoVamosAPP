@@ -18,10 +18,11 @@ import 'services/mock/mock_donation_service.dart';
 import 'services/mock/mock_speech_input.dart';
 import 'services/mock/mock_survey_service.dart';
 import 'services/supabase/supabase_assistant_service.dart';
+import 'services/supabase/supabase_data_service.dart';
 
 /// Dependencias de la app. Aquí se cambian las implementaciones sin tocar
-/// pantallas. Hoy solo el asistente es real (si hay credenciales de Supabase);
-/// lo demás sigue en mock.
+/// pantallas. Con credenciales de Supabase, Datos y el asistente son reales;
+/// Encuestas y Donar siguen en mock.
 class AppDependencies {
   AppDependencies._({
     required this.data,
@@ -40,15 +41,15 @@ class AppDependencies {
     }
     final store = LocalStore();
     final donations = MockDonationService();
+    final supabase =
+        config.hasSupabase ? SupabaseClient(config.supabaseUrl, config.supabaseAnonKey) : null;
     return AppDependencies._(
-      data: MockDataService(),
+      data: supabase != null ? SupabaseDataService(supabase) : MockDataService(),
       surveys: MockSurveyService(store),
       drafts: SurveyDraftStorage(store),
       donations: donations,
       payments: MockPaymentPresenter(donations),
-      assistant: config.hasSupabase
-          ? SupabaseAssistantService(SupabaseClient(config.supabaseUrl, config.supabaseAnonKey), store)
-          : MockAssistantService(),
+      assistant: supabase != null ? SupabaseAssistantService(supabase, store) : MockAssistantService(),
       speech: MockSpeechInput(),
     );
   }

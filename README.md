@@ -2,7 +2,7 @@
 
 App móvil (Flutter, iOS y Android) del reto ago-dic 2026 con Jalisco Cómo Vamos. Equipo LinuxVSWindows, grupo 502, Tec GDL.
 
-**Estado: fase 2.** Están las 34 pantallas del wireflow con navegación real. El **asistente ya es real**: Claude Haiku en una Edge Function de Supabase, con los datos de la Encuesta de Bienestar de Jóvenes AMG 2026. Lo demás (Datos, Encuestas, Donar) sigue en servicios mock que se cambian por los reales sin tocar pantallas. No hay login.
+**Estado: fase 2.** Están las 34 pantallas del wireflow con navegación real. **Datos y el asistente ya usan la base real** de la Encuesta de Bienestar de Jóvenes AMG 2026 (Supabase + Claude Haiku). Encuestas y Donar siguen en mock. No hay login.
 
 ## Correr la app
 
@@ -114,7 +114,7 @@ Los números son sintéticos. En dev aparece la etiqueta "Datos de ejemplo" para
 ## Siguientes fases
 
 1. Auth con AWS Cognito (pantallas 3.1 a 3.3 y 4.2), con el mismo patrón de CCL: tokens en `flutter_secure_storage`, interceptor de refresh y lambda pre-token-generation.
-2. Datos con la base real: `DataRepository` sobre `jcv.grafica` (falta decidir qué preguntas se muestran por temática). Encuestas y donativos a Supabase. Con login, los RPC validan al usuario con `validate_caller` como en CCL.
+2. Encuestas del Tec con las mismas preguntas del AMG (`lib/services/supabase/graficas_destacadas.dart`), guardadas como fuente Tec para que aparezca la comparativa. Donativos a Supabase. Con login, los RPC validan al usuario con `validate_caller` como en CCL.
 3. Stripe: decidir PaymentSheet dentro de la app contra Checkout en el navegador (RF-DON-01 y la regla 3.2.2 de App Store).
 4. Voz del asistente: `speech_to_text` con `onDevice: true` (hoy es mock).
 5. Informe PDF y compartir.

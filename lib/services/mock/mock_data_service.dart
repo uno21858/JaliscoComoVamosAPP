@@ -1,6 +1,6 @@
 import '../../core/error_sanitizer.dart';
 import '../../core/result.dart';
-import '../../core/utils/formatters.dart';
+import '../../core/utils/summaries.dart';
 import '../../models/models.dart';
 import '../../repositories/data_repository.dart';
 import 'mock_catalog.dart';
@@ -182,37 +182,8 @@ class MockDataService implements DataRepository {
     );
   }
 
-  /// Plantilla: la categoría más común y la que le sigue.
-  static String _summaryFor(List<ChartSlice> slices, {required bool multipleChoice}) {
-    final sorted = [...slices]..sort((a, b) => b.percent.compareTo(a.percent));
-    final first = sorted.first;
-    if (multipleChoice) {
-      return '“${first.label}” es lo más mencionado: '
-          '${Formatters.percent(first.percent)} lo eligió.';
-    }
-    if (sorted.length < 2) {
-      return '“${first.label}” reúne el ${Formatters.percent(first.percent)}.';
-    }
-    final second = sorted[1];
-    return 'La respuesta más común es “${first.label}” '
-        '(${Formatters.percent(first.percent)}), seguida de “${second.label}” '
-        '(${Formatters.percent(second.percent)}).';
-  }
+  static String _summaryFor(List<ChartSlice> slices, {required bool multipleChoice}) =>
+      Summaries.chart(slices, multipleChoice: multipleChoice);
 
-  /// Plantilla: la categoría con la diferencia más grande entre AMG y Tec.
-  static String comparisonSummary(List<ComparisonRow> rows) {
-    final row = rows.reduce(
-      (a, b) => (a.tec - a.amg).abs() >= (b.tec - b.amg).abs() ? a : b,
-    );
-    final tec = Formatters.percent(row.tec);
-    final amg = Formatters.percent(row.amg);
-    final diff = row.tec - row.amg;
-    if (diff.abs() < 3) {
-      return 'En “${row.label}”, el Tec y el AMG están muy parejos '
-          '($tec contra $amg).';
-    }
-    final more = diff > 0 ? 'más' : 'menos';
-    return 'En el Tec, $more jóvenes responden “${row.label}” que en el AMG '
-        '($tec contra $amg).';
-  }
+  static String comparisonSummary(List<ComparisonRow> rows) => Summaries.comparison(rows);
 }
