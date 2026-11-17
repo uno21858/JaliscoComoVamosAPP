@@ -15,8 +15,9 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.jaliscocomovamos"
+        // ponytail: namespace se queda en com.example (solo afecta al código Kotlin);
+        // la tienda solo ve applicationId.
+        applicationId = "mx.jalisco.comovamos.jcv_app"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion

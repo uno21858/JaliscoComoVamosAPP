@@ -1,6 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Flutter solo lo agrega en debug; sin esto el release no tiene red. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
-        android:label="jaliscocomovamos"
+        android:label="Jalisco Cómo Vamos"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
