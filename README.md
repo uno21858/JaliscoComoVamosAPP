@@ -2,26 +2,23 @@
 
 App móvil (Flutter, iOS y Android) del reto ago-dic 2026 con Jalisco Cómo Vamos. Equipo LinuxVSWindows, grupo 502, Tec GDL.
 
-**Estado: fase 1.** Están las 34 pantallas del wireflow con navegación real y datos de ejemplo. No hay login ni backend todavía: todo pasa por servicios mock que se cambian por los reales sin tocar pantallas.
+**Estado: fase 2.** Están las 34 pantallas del wireflow con navegación real. El **asistente ya es real**: Claude Haiku en una Edge Function de Supabase, con los datos de la Encuesta de Bienestar de Jóvenes AMG 2026. Lo demás (Datos, Encuestas, Donar) sigue en servicios mock que se cambian por los reales sin tocar pantallas. No hay login.
 
 ## Correr la app
 
 Requisitos: Flutter 3.29 o más nuevo.
 
-Este zip no trae las carpetas `android/` ni `ios/`. Se generan una vez:
-
 ```bash
-cd jcv_app
-flutter create --org mx.jalisco.comovamos --project-name jcv_app --platforms android,ios .
+cp env/dev.example.json env/dev.json   # y llena URL y anon key de Supabase
 flutter pub get
 flutter analyze
 flutter test
-flutter run -t lib/main_dev.dart
+flutter run -t lib/main_dev.dart --dart-define-from-file=env/dev.json
 ```
 
-`flutter create .` no sobrescribe `lib/` ni `pubspec.yaml`; solo agrega lo que falta. Si te pregunta por `test/widget_test.dart`, bórralo: apunta a un `MyApp` que no existe.
+En Android Studio: Run → Edit Configurations → Additional run args → `--dart-define-from-file=env/dev.json`. Sin ese archivo la app corre igual, pero el asistente usa el mock. `env/*.json` no se sube a git (solo el `.example`).
 
-Como en CCL, `lib/main.dart` truena a propósito: siempre se corre con `main_dev.dart` o `main_prod.dart`. Los flavors de Gradle y Xcode (`--flavor dev`) se configuran cuando entren Supabase y Cognito, porque ahí cambian llaves y proyectos.
+Como en CCL, `lib/main.dart` truena a propósito: siempre se corre con `main_dev.dart` o `main_prod.dart`. Los flavors de Gradle y Xcode (`--flavor dev`) se configuran cuando entre Cognito, porque ahí cambian llaves y proyectos.
 
 ## Estructura
 
@@ -36,11 +33,27 @@ lib/
   repositories/   interfaces: DataRepository, SurveyRepository, DonationRepository, AssistantRepository
   services/
     mock/         implementaciones con datos sintéticos
-    local/        almacenamiento cifrado (borradores de encuesta)
+    local/        almacenamiento cifrado (borradores de encuesta, id del dispositivo)
+    supabase/     implementaciones reales (hoy: el asistente)
   providers/      ChangeNotifier (Provider)
   widgets/        design system del wireflow
   screens/        una carpeta por flujo: home, data, surveys, donate, assistant
+SQLScripts/       migraciones vX.XX_*.sql del schema jcv (se corren en orden)
+scripts/          importar_amg.py + cargar_amg.sql (datos de JCV), deploy_asistente.sh
+supabase/         edge functions, una carpeta por función (como CCL, no supabase/functions/)
+env/              credenciales por ambiente para --dart-define-from-file
 ```
+
+## Backend del asistente
+
+Vive en el proyecto Supabase de **CCL DEV**, aislado en el schema `jcv` (expuesto en Settings → API). Las tablas tienen RLS sin políticas: solo se entra por funciones `SECURITY DEFINER` que hoy solo puede ejecutar `service_role`. Del servidor a la app solo salen agregados, nunca filas.
+
+- **Datos:** `jcv.personas` (municipio, edad, sexo, estrato, factor), `jcv.respuestas` (formato largo) y `jcv.preguntas` (catálogo). `jcv.grafica()` pondera con el factor de expansión y cuenta "No sabe/No contestó" en la base, igual que los cruces de JCV (verificado: 764 porcentajes, 0 diferencias).
+- **Cargar la base de JCV:** `python3 -I scripts/importar_amg.py "<carpeta de datos>"` genera los CSV en `~/Downloads/jcv_import` (fuera del repo; se quitan colonia, fecha y respuestas abiertas) y se suben con `scripts/cargar_amg.sql` o desde el Table Editor, en orden: preguntas, personas, respuestas.
+- **Edge Function `jcv-asistente`:** Haiku elige la pregunta y los filtros, consulta `jcv.grafica` y redacta. Toda cifra del texto se revisa contra la DB; si no cuadra, se responde con plantilla. Deploy: `sh scripts/deploy_asistente.sh`. Secret: `ANTHROPIC_API_KEY`.
+- **Límites:** 20 preguntas al día y 10 por minuto por dispositivo (id aleatorio guardado en el teléfono); 1000 al día y 60 por minuto por IP. El tope de dinero es el límite de gasto en la consola de Anthropic.
+- **Caché:** el system prompt se cachea en Anthropic y las preguntas repetidas sin historial salen de `jcv.cache_respuestas`. Si cambias prompt, modelo o datos, sube `CACHE_VERSION` en la función.
+- **Bitácora:** cada pregunta queda en `jcv.bitacora`, anónima (IP y dispositivo con hash).
 
 **Barrels:** uno por capa (`core/core.dart`, `models/models.dart`, `repositories/repositories.dart`, `providers/providers.dart`, `widgets/widgets.dart`). Las pantallas importan barrels; dentro de una misma carpeta se importa el archivo directo para no crear ciclos.
 
@@ -100,12 +113,12 @@ Los números son sintéticos. En dev aparece la etiqueta "Datos de ejemplo" para
 ## Siguientes fases
 
 1. Auth con AWS Cognito (pantallas 3.1 a 3.3 y 4.2), con el mismo patrón de CCL: tokens en `flutter_secure_storage`, interceptor de refresh y lambda pre-token-generation.
-2. Supabase: tablas con RLS deny-all y todo por RPC `SECURITY DEFINER` con `validate_caller`, como CCL. Servicios en `lib/services/supabase/` que implementan las mismas interfaces.
+2. Datos con la base real: `DataRepository` sobre `jcv.grafica` (falta decidir qué preguntas se muestran por temática). Encuestas y donativos a Supabase. Con login, los RPC validan al usuario con `validate_caller` como en CCL.
 3. Stripe: decidir PaymentSheet dentro de la app contra Checkout en el navegador (RF-DON-01 y la regla 3.2.2 de App Store).
-4. Asistente: Edge Function con Gemini en modo de llamada a función y `speech_to_text` con `onDevice: true`.
+4. Voz del asistente: `speech_to_text` con `onDevice: true` (hoy es mock).
 5. Informe PDF y compartir.
 
-Pendientes del equipo antes del backend: umbral k, qué recibe Gemini, si el dashboard es público y si entran menores de 18.
+Pendientes del equipo: umbral k (hoy 30 en `jcv.grafica`), si el dashboard es público y si entran menores de 18 (la base AMG sí trae jóvenes de 15 a 17).
 
 ## Marcadores
 

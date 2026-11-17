@@ -10,13 +10,15 @@ class AssistantFigure {
 
   final String caption;
   final double amg;
-  final double tec;
+
+  /// null: todavía no hay suficientes respuestas del Tec (umbral de privacidad).
+  final double? tec;
   final int nAmg;
   final int nTec;
 }
 
-/// Respuesta del asistente. El texto sale de una plantilla del servidor con
-/// cifras calculadas por el mismo código del dashboard, nunca de Gemini.
+/// Respuesta del asistente. Haiku redacta, pero cada cifra del texto la
+/// revisa el servidor contra la DB (RF-IA-04/05); si no cuadra, usa plantilla.
 class AssistantAnswer {
   const AssistantAnswer({required this.text, this.figure, this.topicId});
 

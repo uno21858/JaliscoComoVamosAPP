@@ -29,11 +29,12 @@ class AssistantController extends ChangeNotifier {
   Future<void> send(String rawText) async {
     final text = rawText.trim();
     if (text.isEmpty || _thinking) return;
+    final history = List<ChatMessage>.of(_messages);
     _messages.add(ChatMessage.user(text));
     _thinking = true;
     notifyListeners();
 
-    final result = await _repository.ask(text);
+    final result = await _repository.ask(text, history: history);
     if (_disposed) return;
     _thinking = false;
     switch (result) {

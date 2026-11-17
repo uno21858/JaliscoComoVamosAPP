@@ -10,6 +10,8 @@ void main() {
       flavor: Flavor.dev,
       useMocks: true,
       showMockBanner: true,
+      supabaseUrl: String.fromEnvironment('SUPABASE_URL'),
+      supabaseAnonKey: String.fromEnvironment('SUPABASE_ANON_KEY'),
     ),
   );
   runApp(const JcvApp());

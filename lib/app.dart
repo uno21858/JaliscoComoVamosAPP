@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:supabase/supabase.dart';
 
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
@@ -16,9 +17,11 @@ import 'services/mock/mock_data_service.dart';
 import 'services/mock/mock_donation_service.dart';
 import 'services/mock/mock_speech_input.dart';
 import 'services/mock/mock_survey_service.dart';
+import 'services/supabase/supabase_assistant_service.dart';
 
-/// Dependencias de la app. Hoy todo es mock; cuando exista el backend, aquí
-/// se cambian las implementaciones sin tocar pantallas.
+/// Dependencias de la app. Aquí se cambian las implementaciones sin tocar
+/// pantallas. Hoy solo el asistente es real (si hay credenciales de Supabase);
+/// lo demás sigue en mock.
 class AppDependencies {
   AppDependencies._({
     required this.data,
@@ -43,7 +46,9 @@ class AppDependencies {
       drafts: SurveyDraftStorage(store),
       donations: donations,
       payments: MockPaymentPresenter(donations),
-      assistant: MockAssistantService(),
+      assistant: config.hasSupabase
+          ? SupabaseAssistantService(SupabaseClient(config.supabaseUrl, config.supabaseAnonKey), store)
+          : MockAssistantService(),
       speech: MockSpeechInput(),
     );
   }

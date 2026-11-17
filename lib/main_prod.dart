@@ -12,6 +12,8 @@ void main() {
       flavor: Flavor.prod,
       useMocks: true,
       showMockBanner: false,
+      supabaseUrl: String.fromEnvironment('SUPABASE_URL'),
+      supabaseAnonKey: String.fromEnvironment('SUPABASE_ANON_KEY'),
     ),
   );
   runApp(const JcvApp());

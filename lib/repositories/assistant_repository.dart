@@ -1,10 +1,12 @@
 import '../core/result.dart';
 import '../models/models.dart';
 
-/// Asistente de IA. Gemini solo interpreta la pregunta en el servidor;
-/// las cifras salen de las mismas funciones del dashboard (RF-IA-04/05).
+/// Asistente de IA (Claude Haiku en la Edge Function jcv-asistente). Las
+/// cifras salen de jcv.grafica, la misma función que usará el dashboard.
 abstract interface class AssistantRepository {
-  Future<Result<AssistantAnswer>> ask(String question);
+  /// [history]: mensajes anteriores de la conversación, para entender
+  /// seguimientos como "¿y en Zapopan?".
+  Future<Result<AssistantAnswer>> ask(String question, {List<ChatMessage> history});
 }
 
 /// Voz a texto. El real usará speech_to_text con onDevice: true para que el

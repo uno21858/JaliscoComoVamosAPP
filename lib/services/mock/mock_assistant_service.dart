@@ -25,7 +25,8 @@ class MockAssistantService implements AssistantRepository {
   ];
 
   @override
-  Future<Result<AssistantAnswer>> ask(String question) => guardResult(() async {
+  Future<Result<AssistantAnswer>> ask(String question, {List<ChatMessage> history = const []}) =>
+      guardResult(() async {
         await simulateNetwork();
         final text = question.toLowerCase();
         for (final intent in _intents) {

@@ -8,9 +8,19 @@ class FlavorConfig {
     required this.showMockBanner,
     this.mockLatency = const Duration(milliseconds: 700),
     this.mockFailureRate = 0,
+    this.supabaseUrl = '',
+    this.supabaseAnonKey = '',
   });
 
   final Flavor flavor;
+
+  /// Supabase (proyecto CCL DEV, schema jcv). Llegan con
+  /// `--dart-define-from-file=env/dev.json` para no dejarlos en el repo.
+  /// Vacíos: el asistente usa el mock y la app corre sin backend.
+  final String supabaseUrl;
+  final String supabaseAnonKey;
+
+  bool get hasSupabase => supabaseUrl.isNotEmpty && supabaseAnonKey.isNotEmpty;
 
   /// true: los repositorios usan los servicios de lib/services/mock.
   final bool useMocks;

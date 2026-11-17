@@ -396,7 +396,8 @@ class _MiniComparison extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final maxValue = figure.amg > figure.tec ? figure.amg : figure.tec;
+    final tec = figure.tec;
+    final maxValue = tec != null && tec > figure.amg ? tec : figure.amg;
     Widget row(String label, double value, Color color) {
       return Row(
         children: [
@@ -441,8 +442,8 @@ class _MiniComparison extends StatelessWidget {
     }
 
     return Semantics(
-      label: '${figure.caption}: AMG ${Formatters.percent(figure.amg)}, '
-          'Tec ${Formatters.percent(figure.tec)}',
+      label: '${figure.caption}: AMG ${Formatters.percent(figure.amg)}'
+          '${tec != null ? ', Tec ${Formatters.percent(tec)}' : ''}',
       excludeSemantics: true,
       child: Container(
         width: double.infinity,
@@ -460,12 +461,14 @@ class _MiniComparison extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             row('AMG', figure.amg, AppColors.navy),
-            const SizedBox(height: 8),
-            row('Tec', figure.tec, AppColors.gold),
+            if (tec != null) ...[
+              const SizedBox(height: 8),
+              row('Tec', tec, AppColors.gold),
+            ],
             const SizedBox(height: 8),
             Text(
               'AMG 2026 · n = ${Formatters.thousands(figure.nAmg)} · '
-              'Tec · n = ${Formatters.thousands(figure.nTec)}',
+              '${tec != null ? 'Tec · n = ${Formatters.thousands(figure.nTec)}' : 'Tec: aún sin respuestas suficientes'}',
               style: const TextStyle(
                 fontSize: 10,
                 height: 14 / 10,

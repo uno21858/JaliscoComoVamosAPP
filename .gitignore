@@ -49,3 +49,7 @@ app.*.map.json
 
 # Supabase CLI
 supabase/.temp/
+
+# Credenciales por ambiente (--dart-define-from-file); solo el ejemplo va al repo
+env/*.json
+!env/*.example.json
