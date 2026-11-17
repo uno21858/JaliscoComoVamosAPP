@@ -39,7 +39,7 @@ class _AssistantView extends StatefulWidget {
 class _AssistantViewState extends State<_AssistantView> {
   final _input = TextEditingController();
   final _scroll = ScrollController();
-  int _lastCount = 0;
+  int _lastState = 0;
 
   @override
   void initState() {
@@ -60,15 +60,19 @@ class _AssistantViewState extends State<_AssistantView> {
     unawaited(controller.send(text));
   }
 
-  void _scrollToEndIfNeeded(int count) {
-    if (count == _lastCount) return;
-    _lastCount = count;
+  /// Baja al final cuando llega un mensaje o empieza/termina "pensando".
+  /// Contar solo elementos no basta: la respuesta reemplaza al globo de
+  /// "pensando", el total no cambia y la respuesta quedaba fuera de pantalla.
+  void _scrollToEndIfNeeded(AssistantController controller) {
+    final state = controller.messages.length * 2 + (controller.thinking ? 1 : 0);
+    if (state == _lastState) return;
+    _lastState = state;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!_scroll.hasClients) return;
       unawaited(_scroll.animateTo(
         _scroll.position.maxScrollExtent,
-        duration: const Duration(milliseconds: 250),
-        curve: Curves.easeOut,
+        duration: const Duration(milliseconds: 350),
+        curve: Curves.easeOutCubic,
       ));
     });
   }
@@ -77,7 +81,7 @@ class _AssistantViewState extends State<_AssistantView> {
   Widget build(BuildContext context) {
     final controller = context.watch<AssistantController>();
     final itemCount = controller.messages.length + (controller.thinking ? 1 : 0);
-    _scrollToEndIfNeeded(itemCount);
+    _scrollToEndIfNeeded(controller);
 
     if (controller.listening) {
       return _ListeningView(controller: controller);
