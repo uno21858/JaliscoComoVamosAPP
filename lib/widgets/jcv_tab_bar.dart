@@ -34,12 +34,16 @@ class JcvTabBar extends StatelessWidget {
 
   static const _overhang = 22.0;
   static const _itemsHeight = 49.0;
+  static const _anim = Duration(milliseconds: 300);
 
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.paddingOf(context).bottom;
     final barHeight = _itemsHeight + (bottomInset > 8 ? bottomInset : 8);
 
+    // Como el CustomBottomNavBar de CCL: sin onda de tinta (quedaba detrás del
+    // fondo blanco), una pastilla que crece detrás del ícono activo y el ícono
+    // sube un poco. Todo animado 300 ms.
     Widget tab(int index) {
       final spec = _tabs[index];
       final active = index == currentIndex;
@@ -50,26 +54,52 @@ class JcvTabBar extends StatelessWidget {
           button: true,
           label: spec.label,
           excludeSemantics: true,
-          child: InkResponse(
+          child: GestureDetector(
             onTap: () => onTap(index),
-            radius: 32,
+            behavior: HitTestBehavior.opaque,
             child: SizedBox(
               height: _itemsHeight,
               child: Padding(
-                padding: const EdgeInsets.only(top: 8),
+                padding: const EdgeInsets.only(top: 5),
                 child: Column(
                   children: [
-                    Icon(active ? spec.activeIcon : spec.icon, size: 24, color: color),
-                    const SizedBox(height: 4),
-                    Text(
-                      spec.label,
-                      maxLines: 1,
+                    SizedBox(
+                      width: 52,
+                      height: 28,
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          AnimatedContainer(
+                            duration: _anim,
+                            curve: Curves.easeInOut,
+                            width: active ? 52 : 0,
+                            height: active ? 28 : 0,
+                            decoration: BoxDecoration(
+                              color: AppColors.navy.withValues(alpha: active ? 0.08 : 0),
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
+                          AnimatedContainer(
+                            duration: _anim,
+                            curve: Curves.easeInOut,
+                            transform: Matrix4.translationValues(0, active ? -1 : 0, 0),
+                            child: Icon(active ? spec.activeIcon : spec.icon, size: 24, color: color),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    AnimatedDefaultTextStyle(
+                      duration: _anim,
+                      curve: Curves.easeInOut,
                       style: TextStyle(
+                        fontFamily: 'Montserrat',
                         fontSize: 11,
                         height: 13 / 11,
                         fontWeight: active ? FontWeight.w800 : FontWeight.w600,
                         color: color,
                       ),
+                      child: Text(spec.label, maxLines: 1),
                     ),
                   ],
                 ),
