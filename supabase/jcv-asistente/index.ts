@@ -321,7 +321,10 @@ Deno.serve(async (req) => {
   const dispositivo = req.headers.get("x-jcv-dispositivo") ?? "";
   if (!UUID.test(dispositivo)) return json({ error: "Actualiza la app para usar el asistente." }, 400);
 
-  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "sin-ip";
+  // cf-connecting-ip lo pone Cloudflare y no se puede falsificar (probado). Aquí el
+  // gateway ya limpia x-forwarded-for, así que queda solo como respaldo.
+  const ip = req.headers.get("cf-connecting-ip")?.trim() ||
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "sin-ip";
   const anotada = await db.rpc("anotar_pregunta", {
     p_ip_hash: await hmac(ip), p_dispositivo_hash: await hmac(dispositivo.toLowerCase()), p_pregunta: entrada.pregunta,
   });
