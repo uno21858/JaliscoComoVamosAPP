@@ -27,7 +27,7 @@ const MAX_CONSULTAS = 3;
 const MAX_CUERPO = 16_000;
 const MAX_RESPUESTA = 700; // más largo = Haiku se salió del papel -> plantilla
 const MAX_RESPUESTA_SIN_DATOS = 350; // sin consultar datos solo debe redirigir
-const CACHE_VERSION = "v5";
+const CACHE_VERSION = "v8";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -72,7 +72,7 @@ Reglas:
 - Usa porcentajes, no fracciones. Escribe los números sin separador de miles.
 - Si la pregunta no tiene que ver con la encuesta o la encuesta no la cubre, dilo en una frase y sugiere un tema que sí cubre. No inventes.
 - Responde solo en español (ni una palabra en inglés), en 1 a 3 frases cortas para público general. Sin listas ni markdown.
-- Si el resultado trae muestra_pequena, avisa que la muestra es pequeña.
+- Si muestra_pequena es true, avisa que la muestra es pequeña. Si es false, no menciones el tamaño de la muestra.
 - La herramienta no da cuántos encuestados hay por sexo, edad, estrato o municipio. No ofrezcas esa distribución.
 - Todavía no hay suficientes respuestas de estudiantes del Tec. Solo menciónalo si preguntan por el Tec.
 - Los porcentajes ya están ponderados: preséntalos como "X% de los jóvenes". Cada porcentaje es sobre todos los que contestaron esa pregunta, nunca sobre un subgrupo: no digas "entre quienes sí..." a menos que la pregunta solo se le haya hecho a ese grupo.
@@ -147,27 +147,58 @@ function numeros(s: string): number[] {
   return [...sinMiles.matchAll(/\d+(?:[.,]\d+)?/g)].map((m) => Number(m[0].replace(",", ".")));
 }
 
+/** Solo los números que van con "%": "Hasta 30 minutos" no es un porcentaje. */
+function porcentajes(s: string): number[] {
+  return [...s.matchAll(/(\d+(?:[.,]\d+)?)\s*%/g)].map((m) => Number(m[1].replace(",", ".")));
+}
+
+/**
+ * El texto puede redondear al entero (54.8 -> 55, y 17.5 -> 17 o 18) o dejar
+ * un decimal (54.8). Se acepta lo que esté a medio punto o a medio décimo.
+ */
+const coincide = (valor: number, x: number) =>
+  Math.abs(valor - x) <= (Number.isInteger(x) ? 0.5 : 0.05) + 1e-9;
+
+/**
+ * Sumas de 1 a 3 opciones de una misma pregunta ("algo o muy satisfecho",
+ * "poco, nada o ni..."), con las opciones que la forman. Primero las opciones
+ * solas, luego pares y luego tríos: así la figura prefiere la opción exacta.
+ */
+function combinaciones(g: Grafica): { valor: number; opciones: Opcion[] }[] {
+  const ops = g.opciones.filter((o) => o.porcentaje !== null);
+  const suma = (os: Opcion[]) => ({ valor: os.reduce((t, o) => t + o.porcentaje!, 0), opciones: os });
+  const solas = ops.map((o) => suma([o]));
+  const pares = ops.flatMap((a, i) => ops.slice(i + 1).map((b) => suma([a, b])));
+  const trios = ops.flatMap((a, i) =>
+    ops.slice(i + 1).flatMap((b, j) => ops.slice(i + j + 2).map((c) => suma([a, b, c]))));
+  return [...solas, ...pares, ...trios];
+}
+
 /** true si cada número del texto sale de lo que regresó la DB. */
 function cifrasValidas(texto: string, consultas: Consulta[]): boolean {
   const ok = new Set<number>([1207, 15, 19, 20, 24, 25, 29, 2026]);
-  const agregar = (v: number) => {
-    ok.add(Math.round(v * 10) / 10);
-    ok.add(Math.round(v));
-  };
+  const valores: number[] = [];
   for (const c of consultas) {
     for (const g of [c.amg, c.tec]) {
       ok.add(g.n);
       numeros(g.texto).forEach((x) => ok.add(x));
       g.opciones.forEach((o) => numeros(o.etiqueta).forEach((x) => ok.add(x)));
-      const ps = g.opciones.map((o) => o.porcentaje).filter((p): p is number => p !== null);
-      ps.forEach(agregar);
-      ps.forEach((a, x) => ps.slice(x + 1).forEach((b) => agregar(a + b))); // "satisfecho o muy satisfecho"
+      combinaciones(g).forEach((k) => valores.push(k.valor));
     }
   }
-  return numeros(texto).every((x) => ok.has(x));
+  return numeros(texto).every((x) => ok.has(x) || valores.some((v) => coincide(v, x)));
 }
 
 const mayor = (g: Grafica) => g.opciones.reduce((a, b) => ((b.porcentaje ?? -1) > (a.porcentaje ?? -1) ? b : a));
+
+/** "¿...? Estudias" -> "Estudias". Los paréntesis no son inciso: "(tiempo en minutos)". */
+function inciso(texto: string): string {
+  const i = texto.includes("?") ? texto.slice(texto.lastIndexOf("?") + 1).trim() : "";
+  return i.startsWith("(") ? "" : i;
+}
+
+/** "En una escala..., ¿qué tan feliz eres?" -> "¿qué tan feliz eres?" */
+const preguntaCorta = (texto: string) => (texto.includes("¿") ? texto.slice(texto.indexOf("¿")) : texto);
 
 function describirFiltros(f: Filtros): string {
   const partes = [
@@ -183,42 +214,47 @@ const SIN_DATOS =
   "Puedo contarte qué dicen los jóvenes del AMG sobre bienestar, educación y trabajo, tiempo libre, " +
   "hogar y familia, salud, seguridad, comunidad y transporte. ¿Qué te gustaría saber?";
 
-function plantilla(c: Consulta): string {
-  const g = c.amg;
-  if (g.n === 0) return "No encontré respuestas con esos filtros. Prueba quitando alguno.";
-  const top = mayor(g);
-  const pregunta = g.texto.includes("¿") ? g.texto.slice(g.texto.indexOf("¿")) : g.texto;
-  let t = `A la pregunta “${pregunta}”, la respuesta más común entre los jóvenes del AMG${describirFiltros(c.filtros)} ` +
-    `fue “${top.etiqueta}”, con ${top.porcentaje}%.`;
-  if (g.muestra_pequena) t += ` Ojo: solo ${g.n} personas cumplen esos filtros, la muestra es pequeña.`;
-  return t;
+const conDatos = (consultas: Consulta[]) => consultas.filter((c) => c.amg.n > 0 && !c.amg.insuficiente);
+
+/** Respuesta sin Haiku: una frase por consulta (máximo 3), solo con cifras de la DB. */
+function plantilla(consultas: Consulta[]): string {
+  const validas = conDatos(consultas);
+  if (validas.length === 0) {
+    return consultas.length ? "No encontré suficientes respuestas con esos filtros. Prueba quitando alguno." : SIN_DATOS;
+  }
+  const frases = validas.slice(0, 3).map((c) => {
+    const g = c.amg;
+    const quien = `los jóvenes del AMG${describirFiltros(c.filtros)}`;
+    const si = g.opciones.find((o) => o.etiqueta === "Sí");
+    if (si) return `${si.porcentaje}% de ${quien} respondió que sí a “${inciso(g.texto) || preguntaCorta(g.texto)}”.`;
+    const top = mayor(g);
+    return `A “${preguntaCorta(g.texto)}”, la respuesta más común de ${quien} fue “${top.etiqueta}” (${top.porcentaje}%).`;
+  });
+  if (validas.some((c) => c.amg.muestra_pequena)) frases.push("Ojo: con esos filtros la muestra es pequeña.");
+  return frases.join(" ");
 }
 
 /**
- * La opción de la que habla el texto: la del primer porcentaje que cita (en la
- * consulta de donde salió), si no la que nombra por etiqueta, si no la mayor.
+ * La opción de la que habla el texto: la del primer porcentaje que cita. Si es
+ * una suma ("91% algo o muy satisfecho"), la mayor de las que suma. Si no cita
+ * ninguno, la respuesta más común de la primera consulta.
  */
 function figura(texto: string, consultas: Consulta[]) {
-  const validas = consultas.filter((c) => c.amg.n > 0);
+  const validas = conDatos(consultas);
   if (validas.length === 0) return null;
-  const cita = (o: Opcion, x: number) => o.porcentaje !== null && (o.porcentaje === x || Math.round(o.porcentaje) === x);
-  // En preguntas de cuadrícula el inciso va después del "?": "...? Estudias" -> "Estudias: Sí".
-  const inciso = (t: string) => (t.includes("?") ? t.slice(t.lastIndexOf("?") + 1).trim() : "");
   const armar = (c: Consulta, op: Opcion) => ({
     etiqueta: (inciso(c.amg.texto) ? `${inciso(c.amg.texto)}: ` : "") + op.etiqueta + describirFiltros(c.filtros),
     amg: op.porcentaje,
     tec: c.tec.opciones.find((o) => o.codigo === op.codigo)?.porcentaje ?? null,
     n_amg: c.amg.n, n_tec: c.tec.n, muestra_pequena: c.amg.muestra_pequena,
   });
-  for (const x of numeros(texto)) {
+  for (const x of porcentajes(texto)) {
     for (const c of validas) {
-      const op = c.amg.opciones.find((o) => cita(o, x));
-      if (op) return armar(c, op);
+      const k = combinaciones(c.amg).find((k) => coincide(k.valor, x));
+      if (k) return armar(c, k.opciones.reduce((a, b) => (b.porcentaje! > a.porcentaje! ? b : a)));
     }
   }
-  const c = validas.at(-1)!;
-  const minus = texto.toLowerCase();
-  return armar(c, c.amg.opciones.find((o) => minus.includes(o.etiqueta.toLowerCase())) ?? mayor(c.amg));
+  return armar(validas[0], mayor(validas[0].amg));
 }
 
 // ---------- Entrada ----------
@@ -352,8 +388,10 @@ Deno.serve(async (req) => {
   const ultima = consultas.at(-1);
   const limite = consultas.length ? MAX_RESPUESTA : MAX_RESPUESTA_SIN_DATOS;
   if (!texto || texto.length > limite || !cifrasValidas(texto, consultas)) {
+    // Sin la pregunta del usuario: solo lo que escribió Haiku, para afinar el prompt.
+    if (texto) console.log("jcv-asistente rechazado:", texto.slice(0, 400));
     usoPlantilla = true;
-    texto = ultima ? plantilla(ultima) : SIN_DATOS;
+    texto = plantilla(consultas);
   }
 
   const variable = ultima?.amg.variable ?? null;

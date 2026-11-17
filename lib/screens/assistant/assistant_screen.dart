@@ -41,6 +41,9 @@ class _AssistantViewState extends State<_AssistantView> {
   final _scroll = ScrollController();
   int _lastState = 0;
 
+  /// 3 al azar cada vez que se abre el chat, para que no se repitan.
+  final _suggestions = (List.of(_Intro.pool)..shuffle()).take(3).toList();
+
   @override
   void initState() {
     super.initState();
@@ -108,7 +111,7 @@ class _AssistantViewState extends State<_AssistantView> {
             ),
           Expanded(
             child: controller.isEmpty && !controller.thinking
-                ? _Intro(onAsk: (text) => _send(controller, text))
+                ? _Intro(onAsk: (text) => _send(controller, text), suggestions: _suggestions)
                 : ListView.builder(
                     controller: _scroll,
                     padding: const EdgeInsets.fromLTRB(16, 18, 20, 18),
@@ -151,11 +154,30 @@ class _AssistantViewState extends State<_AssistantView> {
 }
 
 class _Intro extends StatelessWidget {
-  const _Intro({required this.onAsk});
+  const _Intro({required this.onAsk, required this.suggestions});
 
   final ValueChanged<String> onAsk;
+  final List<String> suggestions;
 
-  static const _sample = '¿Los del Tec trabajan más o menos que en el AMG?';
+  /// Probadas contra el asistente real (respuesta de Haiku, sin plantilla) y
+  /// guardadas en jcv.cache_respuestas: salen en menos de 1 s y no cuestan.
+  /// Si cambias una, la primera persona que la toque espera la respuesta normal.
+  static const pool = [
+    '¿Qué tan felices son los jóvenes del AMG?',
+    '¿Qué tan satisfechos están con su vida?',
+    '¿Cuántos jóvenes estudian y cuántos trabajan?',
+    '¿Qué tan seguido usan chatbots como ChatGPT?',
+    '¿Cómo vivieron el Mundial los jóvenes?',
+    '¿Qué transporte usan más para moverse?',
+    '¿Cuánto tiempo pasan en el transporte al día?',
+    '¿Se sienten seguros en su colonia?',
+    '¿Cuántos fueron víctimas de un delito el último año?',
+    '¿Cuánto confían en la policía?',
+    '¿Cómo califican su salud mental?',
+    '¿Qué tan seguido hacen ejercicio?',
+    '¿Les alcanza el dinero en su casa?',
+    '¿Les interesa la política?',
+  ];
   static const _chipTopics = [
     'salud',
     'educacion-trabajo',
@@ -214,27 +236,29 @@ class _Intro extends StatelessWidget {
         ),
         const SizedBox(height: 24),
         const SectionLabel('Prueba con'),
-        const SizedBox(height: 10),
-        JcvCard(
-          onTap: () => onAsk(_sample),
-          child: const Row(
-            children: [
-              Expanded(
-                child: Text(
-                  _sample,
-                  style: TextStyle(
-                    fontSize: 14,
-                    height: 19 / 14,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.navy,
+        for (final sample in suggestions) ...[
+          const SizedBox(height: 10),
+          JcvCard(
+            onTap: () => onAsk(sample),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    sample,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      height: 19 / 14,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.navy,
+                    ),
                   ),
                 ),
-              ),
-              SizedBox(width: 12),
-              Icon(CupertinoIcons.arrow_up_right, size: 16, color: AppColors.navy),
-            ],
+                const SizedBox(width: 12),
+                const Icon(CupertinoIcons.arrow_up_right, size: 16, color: AppColors.navy),
+              ],
+            ),
           ),
-        ),
+        ],
       ],
     );
   }
