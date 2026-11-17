@@ -1,19 +1,22 @@
 import 'package:flutter/widgets.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import 'app.dart';
 import 'flavors/flavor_config.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // TODO(backend): cambiar useMocks a false cuando existan los servicios de
-  // Supabase. Mientras tanto prod también usa mocks, pero sin el aviso visual.
+  // ponytail: prod lee el mismo .env que dev mientras JCV no tenga proyecto
+  // de Supabase propio. Cuando lo tenga: .env.prod, como en CCL.
+  await dotenv.load(fileName: '.env');
+  // TODO(backend): useMocks a false cuando Datos, Encuestas y Donar sean reales.
   FlavorConfig.init(
-    const FlavorConfig(
+    FlavorConfig(
       flavor: Flavor.prod,
       useMocks: true,
       showMockBanner: false,
-      supabaseUrl: String.fromEnvironment('SUPABASE_URL'),
-      supabaseAnonKey: String.fromEnvironment('SUPABASE_ANON_KEY'),
+      supabaseUrl: dotenv.env['SUPABASE_URL'] ?? '',
+      supabaseAnonKey: dotenv.env['SUPABASE_ANON_KEY'] ?? '',
     ),
   );
   runApp(const JcvApp());

@@ -16,7 +16,9 @@ migrate_working_dir/
 *.iml
 *.ipr
 *.iws
-.idea/
+.idea/*
+# Configuración de Run compartida: el equipo ve "main_dev.dart" junto al botón de play.
+!.idea/runConfigurations/
 
 # The .vscode folder contains launch configuration and tasks you configure in
 # VS Code which you may wish to be included in version control, so this line
@@ -50,6 +52,6 @@ app.*.map.json
 # Supabase CLI
 supabase/.temp/
 
-# Credenciales por ambiente (--dart-define-from-file); solo el ejemplo va al repo
-env/*.json
-!env/*.example.json
+# Llaves por ambiente, como en CCL (se pasan por fuera del repo)
+.env
+.env.prod

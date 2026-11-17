@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/core.dart';
 import '../../core/router/app_routes.dart';
+import '../../flavors/flavor_config.dart';
 import '../../models/models.dart';
 import '../../providers/providers.dart';
 import '../../repositories/repositories.dart';
@@ -96,6 +97,11 @@ class _AssistantViewState extends State<_AssistantView> {
               }
             },
           ),
+          if (!FlavorConfig.instance.hasSupabase)
+            const MockDataBanner(
+              padding: EdgeInsets.fromLTRB(16, 12, 16, 0),
+              text: 'Asistente de prueba, sin conexión al servidor.',
+            ),
           Expanded(
             child: controller.isEmpty && !controller.thinking
                 ? _Intro(onAsk: (text) => _send(controller, text))

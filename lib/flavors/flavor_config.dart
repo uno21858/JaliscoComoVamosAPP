@@ -14,9 +14,8 @@ class FlavorConfig {
 
   final Flavor flavor;
 
-  /// Supabase (proyecto CCL DEV, schema jcv). Llegan con
-  /// `--dart-define-from-file=env/dev.json` para no dejarlos en el repo.
-  /// Vacíos: el asistente usa el mock y la app corre sin backend.
+  /// Supabase (proyecto CCL DEV, schema jcv), leídos del .env como en CCL.
+  /// Vacíos (como en las pruebas): el asistente usa el mock.
   final String supabaseUrl;
   final String supabaseAnonKey;
 

@@ -8,15 +8,17 @@ App móvil (Flutter, iOS y Android) del reto ago-dic 2026 con Jalisco Cómo Vamo
 
 Requisitos: Flutter 3.29 o más nuevo.
 
+1. Pide el archivo **`.env`** al equipo (no está en git porque el repo es público) y ponlo en la raíz del proyecto. Lleva `SUPABASE_URL` y `SUPABASE_ANON_KEY`, como `.env.example`. Sin él la app no compila, igual que CCL.
+2. Corre:
+
 ```bash
-cp env/dev.example.json env/dev.json   # y llena URL y anon key de Supabase
 flutter pub get
 flutter analyze
 flutter test
-flutter run -t lib/main_dev.dart --dart-define-from-file=env/dev.json
+flutter run -t lib/main_dev.dart
 ```
 
-En Android Studio: Run → Edit Configurations → Additional run args → `--dart-define-from-file=env/dev.json`. Sin ese archivo la app corre igual, pero el asistente usa el mock. `env/*.json` no se sube a git (solo el `.example`).
+En IntelliJ / Android Studio elige **main_dev.dart** junto al botón de play (viene en `.idea/runConfigurations/`). El `.env` viaja dentro de la app, así que solo lleva llaves públicas: la anon key lo es por diseño y la key de Anthropic vive únicamente en la Edge Function.
 
 Como en CCL, `lib/main.dart` truena a propósito: siempre se corre con `main_dev.dart` o `main_prod.dart`. Los flavors de Gradle y Xcode (`--flavor dev`) se configuran cuando entre Cognito, porque ahí cambian llaves y proyectos.
 
@@ -27,7 +29,7 @@ Por capa, igual que CCL:
 ```
 lib/
   main.dart, main_dev.dart, main_prod.dart, app.dart
-  flavors/        FlavorConfig (mocks, latencia, fallas simuladas)
+  flavors/        FlavorConfig (mocks, latencia, fallas simuladas, Supabase desde el .env)
   core/           Result<T>/Failure, AppError, ErrorSanitizer, tema, router, utilidades
   models/         modelos inmutables (sin Flutter salvo lo mínimo)
   repositories/   interfaces: DataRepository, SurveyRepository, DonationRepository, AssistantRepository
@@ -41,7 +43,6 @@ lib/
 SQLScripts/       migraciones vX.XX_*.sql del schema jcv (se corren en orden)
 scripts/          importar_amg.py + cargar_amg.sql (datos de JCV), deploy_asistente.sh
 supabase/         edge functions, una carpeta por función (como CCL, no supabase/functions/)
-env/              credenciales por ambiente para --dart-define-from-file
 ```
 
 ## Backend del asistente

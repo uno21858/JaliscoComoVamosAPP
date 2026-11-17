@@ -306,19 +306,24 @@ class NoticeBox extends StatelessWidget {
 
 /// Etiqueta para no confundir datos sintéticos con resultados reales.
 class MockDataBanner extends StatelessWidget {
-  const MockDataBanner({super.key, this.padding = const EdgeInsets.symmetric(horizontal: 20)});
+  const MockDataBanner({
+    super.key,
+    this.padding = const EdgeInsets.symmetric(horizontal: 20),
+    this.text = 'Datos de ejemplo para desarrollo. No son resultados reales.',
+  });
 
   final EdgeInsetsGeometry padding;
+  final String text;
 
   @override
   Widget build(BuildContext context) {
     if (!FlavorConfig.instance.showMockBanner) return const SizedBox.shrink();
     return Padding(
       padding: padding,
-      child: const NoticeBox(
+      child: NoticeBox(
         icon: CupertinoIcons.info,
-        text: 'Datos de ejemplo para desarrollo. No son resultados reales.',
-        textStyle: TextStyle(
+        text: text,
+        textStyle: const TextStyle(
           fontSize: 11,
           height: 16 / 11,
           fontWeight: FontWeight.w700,
