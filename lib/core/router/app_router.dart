@@ -9,6 +9,7 @@ import '../../screens/data/report_preview_screen.dart';
 import '../../screens/data/report_screen.dart';
 import '../../screens/data/topic_screen.dart';
 import '../../screens/donate/donation_result_screen.dart';
+import '../../screens/onboarding/onboarding_screen.dart';
 import '../../screens/shell/main_shell.dart';
 import '../../screens/splash/splash_screen.dart';
 import '../../screens/surveys/privacy_notice_screen.dart';
@@ -25,6 +26,12 @@ GoRouter buildRouter() {
       GoRoute(
         path: AppRoutes.splash,
         builder: (context, state) => const SplashScreen(),
+      ),
+
+      // BIENVENIDA (primera vez, o desde el logo de Inicio)
+      GoRoute(
+        path: AppRoutes.welcome,
+        builder: (context, state) => const OnboardingScreen(),
       ),
 
       // MAIN (las 4 pestañas)

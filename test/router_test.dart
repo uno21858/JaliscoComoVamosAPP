@@ -7,11 +7,13 @@ import 'package:jcv_app/models/models.dart';
 import 'package:jcv_app/screens/data/topic_screen.dart';
 import 'package:jcv_app/screens/data/topics_screen.dart';
 import 'package:jcv_app/screens/home/home_screen.dart';
+import 'package:jcv_app/screens/onboarding/onboarding_screen.dart';
 import 'package:jcv_app/widgets/widgets.dart';
 
 void main() {
   setUp(() {
-    FlutterSecureStorage.setMockInitialValues({});
+    // Ya vio la bienvenida: el splash va directo a Inicio.
+    FlutterSecureStorage.setMockInitialValues({OnboardingScreen.seenKey: '1'});
     FlavorConfig.init(const FlavorConfig(
       flavor: Flavor.dev,
       useMocks: true,

@@ -32,6 +32,7 @@ class AppDependencies {
     required this.payments,
     required this.assistant,
     required this.speech,
+    required this.store,
   });
 
   factory AppDependencies.create(FlavorConfig config) {
@@ -51,6 +52,7 @@ class AppDependencies {
       payments: MockPaymentPresenter(donations),
       assistant: supabase != null ? SupabaseAssistantService(supabase, store) : MockAssistantService(),
       speech: MockSpeechInput(),
+      store: store,
     );
   }
 
@@ -61,6 +63,9 @@ class AppDependencies {
   final PaymentPresenter payments;
   final AssistantRepository assistant;
   final SpeechInput speech;
+
+  /// Almacenamiento cifrado del teléfono (bienvenida vista, borradores, id).
+  final LocalStore store;
 }
 
 class JcvApp extends StatefulWidget {
@@ -91,6 +96,7 @@ class _JcvAppState extends State<JcvApp> {
         Provider<PaymentPresenter>.value(value: _deps.payments),
         Provider<AssistantRepository>.value(value: _deps.assistant),
         Provider<SpeechInput>.value(value: _deps.speech),
+        Provider<LocalStore>.value(value: _deps.store),
         ChangeNotifierProvider<DataFiltersProvider>(create: (_) => DataFiltersProvider()),
         ChangeNotifierProvider<SurveysProvider>(
           create: (_) => SurveysProvider(_deps.surveys, _deps.drafts),

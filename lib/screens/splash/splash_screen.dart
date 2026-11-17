@@ -4,12 +4,15 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 
 import '../../core/router/app_routes.dart';
 import '../../core/theme/app_colors.dart';
+import '../../services/local/local_store.dart';
 import '../../widgets/widgets.dart';
+import '../onboarding/onboarding_screen.dart';
 
-/// 1.1 Splash: logo y carga. Pasa solo a Inicio.
+/// 1.1 Splash: logo y carga. Pasa sola a la bienvenida (primera vez) o a Inicio.
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -19,16 +22,25 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen> {
   Timer? _timer;
+  late final Future<bool> _seenWelcome;
+  bool _leaving = false;
 
   @override
   void initState() {
     super.initState();
+    // Se lee mientras corre el splash, así no se alarga.
+    _seenWelcome =
+        context.read<LocalStore>().read(OnboardingScreen.seenKey).then((value) => value != null);
     _timer = Timer(const Duration(milliseconds: 1400), _goHome);
   }
 
-  void _goHome() {
+  /// La primera vez va a la bienvenida; después, directo a Inicio.
+  Future<void> _goHome() async {
+    if (_leaving) return; // el toque y el timer pueden llegar juntos
+    _leaving = true;
     _timer?.cancel();
-    if (mounted) context.go(AppRoutes.home);
+    final seen = await _seenWelcome;
+    if (mounted) context.go(seen ? AppRoutes.home : AppRoutes.welcome);
   }
 
   @override

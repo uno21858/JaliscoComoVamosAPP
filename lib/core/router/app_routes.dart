@@ -2,6 +2,7 @@
 /// sueltos, para que un cambio de ruta truene en compilación.
 abstract final class AppRoutes {
   static const splash = '/';
+  static const welcome = '/bienvenida';
   static const assistant = '/asistente';
 
   // MAIN (barra inferior). Las 4 pestañas son la misma pantalla con ?tab=,

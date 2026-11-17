@@ -42,10 +42,11 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildBody(BuildContext context) {
     return Column(
       children: [
-        const RootHeader(
+        RootHeader(
           title: '¡Hola!',
           subtitle: 'Descubre cómo viven los jóvenes del AMG',
           showMark: true,
+          onMarkTap: () => context.push(AppRoutes.welcome),
         ),
         Expanded(
           child: ListView(

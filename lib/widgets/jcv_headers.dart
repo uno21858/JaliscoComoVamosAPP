@@ -15,6 +15,7 @@ class RootHeader extends StatelessWidget {
     required this.title,
     required this.subtitle,
     this.showMark = false,
+    this.onMarkTap,
   });
 
   final String title;
@@ -22,6 +23,9 @@ class RootHeader extends StatelessWidget {
 
   /// Muestra el anillo de JCV a la derecha (solo en Inicio).
   final bool showMark;
+
+  /// Si se da, el anillo es un botón (en Inicio abre la bienvenida otra vez).
+  final VoidCallback? onMarkTap;
 
   @override
   Widget build(BuildContext context) {
@@ -68,7 +72,19 @@ class RootHeader extends StatelessWidget {
                 ),
                 if (showMark) ...[
                   const SizedBox(width: 12),
-                  const JcvRing(size: 44, onDark: true),
+                  if (onMarkTap case final onTap?)
+                    Semantics(
+                      button: true,
+                      label: '¿Qué es esta app?',
+                      excludeSemantics: true,
+                      child: GestureDetector(
+                        onTap: onTap,
+                        behavior: HitTestBehavior.opaque,
+                        child: const JcvRing(size: 44, onDark: true),
+                      ),
+                    )
+                  else
+                    const JcvRing(size: 44, onDark: true),
                 ],
               ],
             ),

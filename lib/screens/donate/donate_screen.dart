@@ -102,6 +102,12 @@ class _DonateViewState extends State<_DonateView> {
               padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
               keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
               children: [
+                // TODO(stripe): quitar cuando el pago sea real.
+                const NoticeBox(
+                  icon: CupertinoIcons.hammer_fill,
+                  text: 'En construcción: el pago es de prueba y no se cobra nada.',
+                ),
+                const SizedBox(height: 14),
                 const Text(
                   'Tu donativo ayuda a Jalisco Cómo Vamos a seguir midiendo cómo vamos.',
                   style: TextStyle(
