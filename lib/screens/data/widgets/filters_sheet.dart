@@ -150,74 +150,94 @@ class _FiltersSheetState extends State<FiltersSheet> {
               ),
               const SizedBox(height: 16),
               const _GroupLabel('Municipio'),
-              EvenGrid(
-                columns: 3,
-                children: [
-                  for (final option in FilterCatalog.municipalities)
-                    SelectChip(
-                      label: option.label,
-                      selected: _filters.municipality == option.code,
-                      onTap: () => _update(
-                        filters: _filters.withMunicipality(
-                          _filters.municipality == option.code ? null : option.code,
+              _Lockable(
+                locked: !_filters.canSet(_filters.municipality),
+                child: EvenGrid(
+                  columns: 3,
+                  children: [
+                    for (final option in FilterCatalog.municipalities)
+                      SelectChip(
+                        label: option.label,
+                        selected: _filters.municipality == option.code,
+                        onTap: () => _update(
+                          filters: _filters.withMunicipality(
+                            _filters.municipality == option.code ? null : option.code,
+                          ),
                         ),
                       ),
-                    ),
-                ],
+                  ],
+                ),
               ),
               const SizedBox(height: 16),
               const _GroupLabel('Rango de edad'),
-              EvenGrid(
-                columns: 3,
-                children: [
-                  for (final option in FilterCatalog.ageGroups)
-                    SelectChip(
-                      label: option.label,
-                      selected: _filters.ageGroup == option.code,
-                      onTap: () => _update(
-                        filters: _filters.withAgeGroup(
-                          _filters.ageGroup == option.code ? null : option.code,
+              _Lockable(
+                locked: !_filters.canSet(_filters.ageGroup),
+                child: EvenGrid(
+                  columns: 3,
+                  children: [
+                    for (final option in FilterCatalog.ageGroups)
+                      SelectChip(
+                        label: option.label,
+                        selected: _filters.ageGroup == option.code,
+                        onTap: () => _update(
+                          filters: _filters.withAgeGroup(
+                            _filters.ageGroup == option.code ? null : option.code,
+                          ),
                         ),
                       ),
-                    ),
-                ],
+                  ],
+                ),
               ),
               const SizedBox(height: 16),
               const _GroupLabel('Sexo'),
-              EvenGrid(
-                columns: 3,
-                children: [
-                  SelectChip(
-                    label: 'Todos',
-                    selected: _filters.sex == null,
-                    onTap: () => _update(filters: _filters.withSex(null)),
-                  ),
-                  for (final option in FilterCatalog.sexes)
+              _Lockable(
+                locked: !_filters.canSet(_filters.sex),
+                child: EvenGrid(
+                  columns: 3,
+                  children: [
                     SelectChip(
-                      label: option.label,
-                      selected: _filters.sex == option.code,
-                      onTap: () => _update(filters: _filters.withSex(option.code)),
+                      label: 'Todos',
+                      selected: _filters.sex == null,
+                      onTap: () => _update(filters: _filters.withSex(null)),
                     ),
-                ],
+                    for (final option in FilterCatalog.sexes)
+                      SelectChip(
+                        label: option.label,
+                        selected: _filters.sex == option.code,
+                        onTap: () => _update(filters: _filters.withSex(option.code)),
+                      ),
+                  ],
+                ),
               ),
               const SizedBox(height: 16),
               const _GroupLabel('Estrato socioeconómico'),
-              EvenGrid(
-                columns: 4,
-                children: [
-                  SelectChip(
-                    label: 'Todos',
-                    selected: _filters.stratum == null,
-                    onTap: () => _update(filters: _filters.withStratum(null)),
-                  ),
-                  for (final option in FilterCatalog.strata)
+              _Lockable(
+                locked: !_filters.canSet(_filters.stratum),
+                child: EvenGrid(
+                  columns: 4,
+                  children: [
                     SelectChip(
-                      label: option.label,
-                      selected: _filters.stratum == option.code,
-                      onTap: () => _update(filters: _filters.withStratum(option.code)),
+                      label: 'Todos',
+                      selected: _filters.stratum == null,
+                      onTap: () => _update(filters: _filters.withStratum(null)),
                     ),
-                ],
+                    for (final option in FilterCatalog.strata)
+                      SelectChip(
+                        label: option.label,
+                        selected: _filters.stratum == option.code,
+                        onTap: () => _update(filters: _filters.withStratum(option.code)),
+                      ),
+                  ],
+                ),
               ),
+              if (_filters.activeCount >= DataFilters.maxActive) ...[
+                const SizedBox(height: 10),
+                const Text(
+                  'Puedes combinar hasta 2 filtros, para proteger la privacidad de quienes '
+                  'respondieron. Quita uno para elegir otro.',
+                  style: AppTextStyles.caption,
+                ),
+              ],
               const SizedBox(height: 18),
               Semantics(
                 liveRegion: true,
@@ -252,6 +272,27 @@ class _FiltersSheetState extends State<FiltersSheet> {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Grupo de filtros bloqueado cuando ya hay 2 activos: se ve atenuado y no
+/// responde. Los grupos que ya tienen filtro siempre se pueden cambiar.
+class _Lockable extends StatelessWidget {
+  const _Lockable({required this.locked, required this.child});
+
+  final bool locked;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      ignoring: locked,
+      child: AnimatedOpacity(
+        opacity: locked ? 0.4 : 1,
+        duration: const Duration(milliseconds: 200),
+        child: child,
       ),
     );
   }

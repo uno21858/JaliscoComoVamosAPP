@@ -95,7 +95,7 @@ Fuera por ahora, porque dependen del login: 3.1 Acceso, 3.2 Registro bloqueado, 
 ## Probar los estados con los mocks
 
 - **2.9 Sin suficientes respuestas:** en Filtros elige fuente Tec y un municipio. La muestra Tec simulada es de 150 y el umbral de 30.
-- **Aviso de muestra pequeña (AMG):** elige municipio, edad, sexo y estrato a la vez.
+- **Aviso de muestra pequeña (AMG):** filtra por El Salto (23 respuestas). Máximo 2 filtros a la vez (privacidad, v1.03).
 - **2.10 Sin conexión:** en `main_dev.dart` pon `mockFailureRate: 0.3` en `FlavorConfig`.
 - **4.6 Pago rechazado:** en la hoja de pago, "Simular pago rechazado" (solo en dev).
 - **Retomar encuesta:** responde unas preguntas, toca "Guardar y salir" y regresa a Encuestas.

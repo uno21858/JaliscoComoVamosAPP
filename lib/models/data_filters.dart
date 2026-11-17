@@ -65,6 +65,14 @@ class DataFilters {
       .where((value) => value != null)
       .length;
 
+  /// Máximo de filtros a la vez. Con más, restando consultas se podría deducir
+  /// lo que contestó un grupo muy chico. El servidor también lo aplica (v1.03).
+  static const maxActive = 2;
+
+  /// Si se puede elegir algo en un grupo cuyo valor actual es [current]:
+  /// siempre si ya tiene filtro (cambiarlo no suma uno), si no, mientras haya cupo.
+  bool canSet(String? current) => current != null || activeCount < maxActive;
+
   DataFilters withMunicipality(String? code) => DataFilters(
       municipality: code, ageGroup: ageGroup, sex: sex, stratum: stratum);
 

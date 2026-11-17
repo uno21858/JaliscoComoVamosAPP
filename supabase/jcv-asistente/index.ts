@@ -73,6 +73,7 @@ Reglas:
 - Si la pregunta no tiene que ver con la encuesta o la encuesta no la cubre, dilo en una frase y sugiere un tema que sí cubre. No inventes.
 - Responde solo en español (ni una palabra en inglés), en 1 a 3 frases cortas para público general. Sin listas ni markdown.
 - Si muestra_pequena es true, avisa que la muestra es pequeña. Si es false, no menciones el tamaño de la muestra.
+- Por privacidad solo se pueden combinar 2 filtros (municipio, edad, sexo o estrato). Si piden más, dilo en una frase y usa los 2 más importantes.
 - Si amg trae insuficiente, di que con esos filtros hay muy pocas respuestas para mostrar resultados y sugiere quitar alguno.
 - La herramienta no da cuántos encuestados hay por sexo, edad, estrato o municipio. No ofrezcas esa distribución.
 - Todavía no hay suficientes respuestas de estudiantes del Tec. Solo menciónalo si preguntan por el Tec.
@@ -87,7 +88,7 @@ ${lista}`;
       name: "consultar_encuesta",
       description:
         "Porcentajes de respuesta a una pregunta de la encuesta, para jóvenes del AMG y del Tec, " +
-        "con filtros opcionales. Usa TODOS para no filtrar.",
+        "con filtros opcionales. Usa TODOS para no filtrar. Máximo 2 filtros distintos de TODOS a la vez.",
       strict: true,
       input_schema: {
         type: "object",
@@ -112,7 +113,8 @@ ${lista}`;
 
 // ---------- Consulta a la DB ----------
 
-async function consultar(input: unknown, variables: Set<string>): Promise<Consulta | null> {
+/** La consulta, o un mensaje de error para Haiku (va como tool_result con is_error). */
+async function consultar(input: unknown, variables: Set<string>): Promise<Consulta | string> {
   // strict ya garantiza el schema; se valida de nuevo porque es la frontera con la DB.
   const i = (input ?? {}) as Record<string, unknown>;
   const valido = (v: unknown, ok: string[]) => typeof v === "string" && (v === "TODOS" || ok.includes(v));
@@ -120,7 +122,11 @@ async function consultar(input: unknown, variables: Set<string>): Promise<Consul
     typeof i.variable !== "string" || !variables.has(i.variable) ||
     !valido(i.municipio, Object.keys(MUNICIPIOS)) || !valido(i.edad, EDADES) ||
     !valido(i.sexo, Object.keys(SEXOS)) || !valido(i.estrato, ESTRATOS)
-  ) return null;
+  ) return "Entrada inválida.";
+  // Privacidad (v1.03): con más de 2 filtros, restando consultas se deduciría a grupos chicos.
+  if ([i.municipio, i.edad, i.sexo, i.estrato].filter((v) => v !== "TODOS").length > 2) {
+    return "Máximo 2 filtros a la vez (municipio, edad, sexo o estrato), por privacidad. Usa los 2 más importantes.";
+  }
 
   const filtros = { municipio: i.municipio, edad: i.edad, sexo: i.sexo, estrato: i.estrato } as Filtros;
   const nulo = (v: string) => (v === "TODOS" ? null : v);
@@ -364,10 +370,12 @@ Deno.serve(async (req) => {
         for (const b of r.content) {
           if (b.type !== "tool_use") continue;
           const c = await consultar(b.input, variables);
-          if (c) consultas.push(c);
-          resultados.push(c
-            ? { type: "tool_result", tool_use_id: b.id, content: paraHaiku(c) }
-            : { type: "tool_result", tool_use_id: b.id, content: "Entrada inválida.", is_error: true });
+          if (typeof c === "string") {
+            resultados.push({ type: "tool_result", tool_use_id: b.id, content: c, is_error: true });
+          } else {
+            consultas.push(c);
+            resultados.push({ type: "tool_result", tool_use_id: b.id, content: paraHaiku(c) });
+          }
         }
         messages.push({ role: "user", content: resultados });
         continue;

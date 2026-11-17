@@ -73,6 +73,16 @@ void main() {
     expect(() => SupabaseDataService.parseCount('x'), throwsA(anything));
   });
 
+  test('máximo 2 filtros: con 2 activos solo se cambian los que ya tienen valor', () {
+    const uno = DataFilters(municipality: 'ZAP');
+    expect(uno.canSet(null), isTrue); // cabe otro
+    const dos = DataFilters(municipality: 'ZAP', sex: 'F');
+    expect(dos.canSet(dos.ageGroup), isFalse); // edad vacía: bloqueada
+    expect(dos.canSet(dos.stratum), isFalse);
+    expect(dos.canSet(dos.municipality), isTrue); // cambiar Zapopan por Tonalá sí
+    expect(dos.canSet(dos.sex), isTrue);
+  });
+
   test('la lista de destacadas es consistente', () {
     final ids = graficasDestacadas.map((d) => d.id).toSet();
     expect(ids, hasLength(graficasDestacadas.length), reason: 'ids repetidos');
