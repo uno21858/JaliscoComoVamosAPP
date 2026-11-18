@@ -10,6 +10,7 @@ import 'flavors/flavor_config.dart';
 import 'providers/providers.dart';
 import 'repositories/repositories.dart';
 import 'screens/donate/mock_payment_sheet.dart';
+import 'services/local/device_speech_input.dart';
 import 'services/local/local_store.dart';
 import 'services/local/survey_draft_storage.dart';
 import 'services/mock/mock_assistant_service.dart';
@@ -22,8 +23,8 @@ import 'services/supabase/supabase_data_service.dart';
 import 'services/supabase/supabase_survey_service.dart';
 
 /// Dependencias de la app. Aquí se cambian las implementaciones sin tocar
-/// pantallas. Con credenciales de Supabase, Datos, Encuestas y el asistente
-/// son reales; Donar sigue en mock.
+/// pantallas. Con credenciales de Supabase, Datos, Encuestas, el asistente y
+/// la voz son reales; sin ellas (pruebas), mocks. Donar sigue en mock.
 class AppDependencies {
   AppDependencies._({
     required this.data,
@@ -37,10 +38,6 @@ class AppDependencies {
   });
 
   factory AppDependencies.create(FlavorConfig config) {
-    if (!config.useMocks) {
-      // TODO(backend): servicios de Supabase en lib/services/supabase/.
-      throw UnimplementedError('El backend real todavía no existe; usa useMocks: true.');
-    }
     final store = LocalStore();
     final donations = MockDonationService();
     final supabase =
@@ -52,7 +49,7 @@ class AppDependencies {
       donations: donations,
       payments: MockPaymentPresenter(donations),
       assistant: supabase != null ? SupabaseAssistantService(supabase, store) : MockAssistantService(),
-      speech: MockSpeechInput(),
+      speech: supabase != null ? DeviceSpeechInput() : MockSpeechInput(),
       store: store,
     );
   }

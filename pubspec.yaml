@@ -20,6 +20,12 @@ dependencies:
   provider: ^6.1.2
   supabase: ^2.16.5
   flutter_dotenv: ^6.0.0
+  speech_to_text: ^7.4.0
+  pdf: ^3.12.0
+  printing: ^5.14.3
+  # ponytail: image 4.11 usa una función de archive 4.1, pero pdf 3.12 no deja
+  # pasar de archive 4.0.x (y pdf 3.13 pide Dart 3.12). Quitar al subir Flutter.
+  image: ">=4.0.0 <4.11.0"
 
 dev_dependencies:
   flutter_lints: ">=5.0.0 <7.0.0"

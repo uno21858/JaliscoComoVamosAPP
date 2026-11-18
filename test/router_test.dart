@@ -16,7 +16,6 @@ void main() {
     FlutterSecureStorage.setMockInitialValues({OnboardingScreen.seenKey: '1'});
     FlavorConfig.init(const FlavorConfig(
       flavor: Flavor.dev,
-      useMocks: true,
       showMockBanner: false,
       mockLatency: Duration.zero,
     ));

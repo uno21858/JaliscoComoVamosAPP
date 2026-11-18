@@ -2,7 +2,7 @@
 
 App móvil (Flutter, iOS y Android) del reto ago-dic 2026 con Jalisco Cómo Vamos. Equipo LinuxVSWindows, grupo 502, Tec GDL.
 
-**Estado: fase 2.** Están las 34 pantallas del wireflow con navegación real. **Datos, Encuestas y el asistente ya usan la base real** de la Encuesta de Bienestar de Jóvenes AMG 2026 (Supabase + Claude Haiku). Donar sigue en mock. No hay login.
+**Estado: fase 2.** Están las 34 pantallas del wireflow con navegación real. **Datos, Encuestas, el asistente (con dictado por voz) y el informe PDF ya son reales**, con la base de la Encuesta de Bienestar de Jóvenes AMG 2026 (Supabase + Claude Haiku). Donar sigue en mock. No hay login.
 
 ## Correr la app
 
@@ -103,8 +103,8 @@ Fuera por ahora, porque dependen del login: 3.1 Acceso, 3.2 Registro bloqueado, 
 
 ## Probar los estados con los mocks
 
-- **2.9 Sin suficientes respuestas:** en Filtros elige fuente Tec y un municipio. La muestra Tec simulada es de 150 y el umbral de 30.
-- **Aviso de muestra pequeña (AMG):** filtra por El Salto (23 respuestas). Máximo 2 filtros a la vez (privacidad, v1.03).
+- **2.9 Sin suficientes respuestas:** en Filtros elige fuente Tec, una edad y un estrato. La muestra Tec simulada es de 150 y el umbral de 30.
+- **Aviso de muestra pequeña (AMG):** con datos reales sale cuando dos filtros dejan menos de 30 respuestas. Máximo 2 filtros a la vez (privacidad, v1.03).
 - **2.10 Sin conexión:** en `main_dev.dart` pon `mockFailureRate: 0.3` en `FlavorConfig`.
 - **4.6 Pago rechazado:** en la hoja de pago, "Simular pago rechazado" (solo en dev).
 - **Retomar encuesta:** responde unas preguntas, toca "Guardar y salir" y regresa a Encuestas.
@@ -116,7 +116,9 @@ Los números son sintéticos. En dev aparece la etiqueta "Datos de ejemplo" para
 
 - Sin login: Encuestas entra directo a la lista y el texto del aviso ya no menciona el correo.
 - La hoja de pago es simulada y no captura tarjeta. En producción la dibuja Stripe.
-- "Exportar PDF" y "Compartir" del informe avisan que todavía no están; "Compartir" en el detalle copia el dato y su fuente.
+- El informe PDF se arma en el teléfono (`services/local/report_pdf.dart`); en papel todas las gráficas van en barras. "Compartir" en el detalle copia el dato y su fuente.
+- Por petición de JCV: sin filtro por municipio (v1.07) y sin mostrar cuántas respuestas hay (ni n, ni total, ni en el chat).
+- Gráficas: dona hasta 6 opciones, anillos para preguntas de grupo (sus % no suman 100) y barras de 7 opciones en adelante.
 - Se agregó "Comparar AMG vs Tec" al final de cada temática; en el wireflow solo se llegaba desde Filtros.
 - La rueda de edad va de 18 a 29, por BR-13.
 
@@ -125,10 +127,9 @@ Los números son sintéticos. En dev aparece la etiqueta "Datos de ejemplo" para
 1. Auth con AWS Cognito (pantallas 3.1 a 3.3 y 4.2), con el mismo patrón de CCL: tokens en `flutter_secure_storage`, interceptor de refresh y lambda pre-token-generation.
 2. Donativos con Stripe; con login, los RPC validan al usuario con `validate_caller` como en CCL y las encuestas pasan de "una vez por teléfono" a "una vez por persona".
 3. Stripe: decidir PaymentSheet dentro de la app contra Checkout en el navegador (RF-DON-01 y la regla 3.2.2 de App Store).
-4. Voz del asistente: `speech_to_text` con `onDevice: true` (hoy es mock).
-5. Informe PDF y compartir.
+4. Historial del asistente guardado, ligado a la cuenta (con login, para validar dueño y evitar IDOR).
 
-Pendientes del equipo: umbral k (hoy 30 en `jcv.grafica`), si el dashboard es público y si entran menores de 18 (la base AMG sí trae jóvenes de 15 a 17).
+Pendientes del equipo: umbral k (hoy 10 AMG y 30 Tec en `jcv.grafica`), si el dashboard es público y si entran menores de 18 (la base AMG sí trae jóvenes de 15 a 17).
 
 ## Marcadores
 

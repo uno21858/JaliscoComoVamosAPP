@@ -1,12 +1,19 @@
+import 'dart:async';
+import 'dart:typed_data';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:printing/printing.dart';
+import 'package:provider/provider.dart';
 
 import '../../core/core.dart';
 import '../../models/models.dart';
+import '../../repositories/repositories.dart';
+import '../../services/local/report_pdf.dart';
 import '../../widgets/widgets.dart';
 
-/// 2.7 Vista previa del informe. Es ilustrativa: el PDF real (RF-DAT-10) se
-/// genera cuando exista el backend, con los mismos agregados del dashboard.
+/// 2.7 Vista previa del informe. La miniatura es ilustrativa; el PDF (RF-DAT-10)
+/// se arma en el teléfono con los mismos agregados del dashboard.
 class ReportPreviewScreen extends StatefulWidget {
   const ReportPreviewScreen({super.key, required this.request});
 
@@ -19,6 +26,8 @@ class ReportPreviewScreen extends StatefulWidget {
 class _ReportPreviewScreenState extends State<ReportPreviewScreen> {
   final _pageController = PageController(viewportFraction: 0.72);
   int _page = 0;
+  Uint8List? _pdf;
+  bool _busy = false;
 
   @override
   void dispose() {
@@ -31,13 +40,56 @@ class _ReportPreviewScreenState extends State<ReportPreviewScreen> {
     return 'informe-jcv-$first.pdf';
   }
 
-  void _notAvailableYet() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('La exportación del informe todavía no está disponible en esta versión.'),
-      ),
-    );
+  void _snack(String text) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
   }
+
+  /// Pide las gráficas de cada temática y arma el PDF una sola vez.
+  Future<Uint8List?> _buildPdf() async {
+    if (_pdf case final pdf?) return pdf;
+    final request = widget.request;
+    final repo = context.read<DataRepository>();
+    final results = await Future.wait([
+      for (final topicId in request.topicIds)
+        repo.getTopicCharts(topicId: topicId, source: request.source, filters: request.filters),
+    ]);
+    final sections = <ReportSection>[];
+    for (final (i, result) in results.indexed) {
+      switch (result) {
+        case Ok(value: Enough(:final data)):
+          sections.add((topicId: request.topicIds[i], data: data));
+        case Ok(value: TooFew()):
+          sections.add((topicId: request.topicIds[i], data: null));
+        case Err(:final failure):
+          _snack(failure.message);
+          return null;
+      }
+    }
+    return _pdf = await buildReportPdf(request, sections);
+  }
+
+  Future<void> _withPdf(Future<void> Function(Uint8List pdf) action) async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    try {
+      final pdf = await _buildPdf();
+      if (pdf != null && mounted) await action(pdf);
+    } on Object {
+      _snack('No se pudo armar el informe. Intenta de nuevo.');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  /// Hoja del sistema para guardar en Archivos o imprimir.
+  void _export() => unawaited(_withPdf(
+        (pdf) => Printing.layoutPdf(onLayout: (_) async => pdf, name: _fileName),
+      ));
+
+  void _share() => unawaited(_withPdf(
+        (pdf) => Printing.sharePdf(bytes: pdf, filename: _fileName),
+      ));
 
   @override
   Widget build(BuildContext context) {
@@ -123,16 +175,16 @@ class _ReportPreviewScreenState extends State<ReportPreviewScreen> {
                   child: Column(
                     children: [
                       JcvButton(
-                        label: 'Exportar PDF',
+                        label: _busy ? 'Armando el PDF…' : 'Exportar PDF',
                         leadingIcon: CupertinoIcons.arrow_down_doc,
-                        onPressed: _notAvailableYet,
+                        onPressed: _busy ? null : _export,
                       ),
                       const SizedBox(height: 12),
                       JcvButton(
                         label: 'Compartir',
                         variant: JcvButtonVariant.outline,
                         leadingIcon: CupertinoIcons.square_arrow_up,
-                        onPressed: _notAvailableYet,
+                        onPressed: _busy ? null : _share,
                       ),
                     ],
                   ),
@@ -209,7 +261,8 @@ class _PagePreview extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               title,
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: AppColors.navy),
+              style:
+                  const TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: AppColors.navy),
             ),
             const SizedBox(height: 2),
             Text(
@@ -222,7 +275,12 @@ class _PagePreview extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 10),
-            for (final (amg, tec) in const [(120.0, 156.0), (48.0, 55.0), (34.0, 11.0), (28.0, 7.0)]) ...[
+            for (final (amg, tec) in const [
+              (120.0, 156.0),
+              (48.0, 55.0),
+              (34.0, 11.0),
+              (28.0, 7.0)
+            ]) ...[
               bar(amg, AppColors.navy),
               const SizedBox(height: 2),
               bar(tec, AppColors.gold),
@@ -252,7 +310,13 @@ class _PagePreview extends StatelessWidget {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Column(
-                    children: [line(1), const SizedBox(height: 6), line(0.8), const SizedBox(height: 6), line(0.66)],
+                    children: [
+                      line(1),
+                      const SizedBox(height: 6),
+                      line(0.8),
+                      const SizedBox(height: 6),
+                      line(0.66)
+                    ],
                   ),
                 ),
               ],

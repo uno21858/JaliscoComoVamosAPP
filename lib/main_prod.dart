@@ -9,11 +9,9 @@ Future<void> main() async {
   // ponytail: prod lee el mismo .env que dev mientras JCV no tenga proyecto
   // de Supabase propio. Cuando lo tenga: .env.prod, como en CCL.
   await dotenv.load(fileName: '.env');
-  // TODO(backend): useMocks a false cuando Datos, Encuestas y Donar sean reales.
   FlavorConfig.init(
     FlavorConfig(
       flavor: Flavor.prod,
-      useMocks: true,
       showMockBanner: false,
       supabaseUrl: dotenv.env['SUPABASE_URL'] ?? '',
       supabaseAnonKey: dotenv.env['SUPABASE_ANON_KEY'] ?? '',

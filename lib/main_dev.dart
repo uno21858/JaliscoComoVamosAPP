@@ -11,7 +11,6 @@ Future<void> main() async {
   FlavorConfig.init(
     FlavorConfig(
       flavor: Flavor.dev,
-      useMocks: true,
       showMockBanner: true,
       supabaseUrl: dotenv.env['SUPABASE_URL'] ?? '',
       supabaseAnonKey: dotenv.env['SUPABASE_ANON_KEY'] ?? '',

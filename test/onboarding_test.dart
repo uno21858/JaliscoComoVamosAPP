@@ -9,8 +9,7 @@ import 'package:jcv_app/screens/onboarding/onboarding_screen.dart';
 void main() {
   setUp(() => FlavorConfig.init(const FlavorConfig(
         flavor: Flavor.dev,
-        useMocks: true,
-        showMockBanner: false,
+          showMockBanner: false,
         mockLatency: Duration.zero,
       )));
 

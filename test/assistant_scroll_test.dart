@@ -31,7 +31,7 @@ class _NoSpeech implements SpeechInput {
 
 void main() {
   setUp(() => FlavorConfig.init(
-        const FlavorConfig(flavor: Flavor.dev, useMocks: true, showMockBanner: false),
+        const FlavorConfig(flavor: Flavor.dev, showMockBanner: false),
       ));
 
   testWidgets('al llegar cada respuesta la lista baja hasta el final', (tester) async {

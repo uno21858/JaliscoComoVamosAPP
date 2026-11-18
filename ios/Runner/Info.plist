@@ -6,6 +6,10 @@
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Para dictarle tu pregunta al asistente. El audio no sale de tu teléfono.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Para convertir tu voz en texto dentro del teléfono y mandárselo al asistente.</string>
 	<key>CFBundleDisplayName</key>
 	<string>Jalisco Cómo Vamos</string>
 	<key>CFBundleExecutable</key>

@@ -4,7 +4,6 @@ enum Flavor { dev, prod }
 class FlavorConfig {
   const FlavorConfig({
     required this.flavor,
-    required this.useMocks,
     required this.showMockBanner,
     this.mockLatency = const Duration(milliseconds: 700),
     this.mockFailureRate = 0,
@@ -20,9 +19,6 @@ class FlavorConfig {
   final String supabaseAnonKey;
 
   bool get hasSupabase => supabaseUrl.isNotEmpty && supabaseAnonKey.isNotEmpty;
-
-  /// true: los repositorios usan los servicios de lib/services/mock.
-  final bool useMocks;
 
   /// Muestra la etiqueta "Datos de ejemplo" para que nadie confunda los
   /// números sintéticos con resultados reales en una demo.

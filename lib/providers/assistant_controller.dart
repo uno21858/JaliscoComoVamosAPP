@@ -51,10 +51,22 @@ class AssistantController extends ChangeNotifier {
     _listening = true;
     _transcript = '';
     notifyListeners();
-    _speechSub = _speech.listen().listen((partial) {
-      _transcript = partial;
-      notifyListeners();
-    });
+    _speechSub = _speech.listen().listen(
+      (partial) {
+        _transcript = partial;
+        notifyListeners();
+      },
+      // Sin permiso o sin reconocedor en español: avisa y deja escribir.
+      onError: (Object _) {
+        unawaited(_stopSpeech());
+        _transcript = '';
+        _messages.add(ChatMessage.assistant(const AssistantAnswer(
+          text: 'No pude usar el micrófono. Revisa el permiso en Ajustes '
+              'o usa el dictado del teclado.',
+        )));
+        notifyListeners();
+      },
+    );
   }
 
   /// Cierra el micrófono sin enviar.
