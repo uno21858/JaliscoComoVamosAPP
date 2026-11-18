@@ -80,7 +80,14 @@ class _TopicsScreenState extends State<TopicsScreen> {
                         style: AppTextStyles.caption,
                       ),
                     ],
-                    const SizedBox(height: 16),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: ChevronLink(
+                        label: '¿Cómo se hizo esta encuesta?',
+                        onPressed: () => context.push(AppRoutes.methodology),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
                     EvenGrid(
                       columns: 2,
                       spacing: 12,

@@ -21,6 +21,7 @@ abstract final class AppRoutes {
       '/datos/tema/$topicId/grafica/$chartId';
   static const report = '/datos/informe';
   static const reportPreview = '/datos/informe/vista-previa';
+  static const methodology = '/datos/metodologia';
 
   // ENCUESTAS
   static String privacyNotice(String surveyId) => '/encuestas/$surveyId/aviso';

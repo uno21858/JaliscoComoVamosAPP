@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:jcv_app/app.dart';
 import 'package:jcv_app/flavors/flavor_config.dart';
 import 'package:jcv_app/models/models.dart';
+import 'package:jcv_app/screens/data/methodology_screen.dart';
 import 'package:jcv_app/screens/data/topic_screen.dart';
 import 'package:jcv_app/screens/data/topics_screen.dart';
 import 'package:jcv_app/screens/home/home_screen.dart';
@@ -45,5 +46,18 @@ void main() {
     expect(find.byType(TopicScreen), findsNothing);
     expect(find.byType(TopicsScreen), findsOneWidget);
     expect(tester.state(topics), same(topicsState));
+  });
+
+  testWidgets('Datos abre la metodología', (tester) async {
+    await tester.pumpWidget(const JcvApp());
+    await tester.pump(const Duration(milliseconds: 1500)); // splash
+    await tester.pumpAndSettle();
+    await tester.tap(find.descendant(of: find.byType(JcvTabBar), matching: find.text('Datos')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('¿Cómo se hizo esta encuesta?'));
+    await tester.pumpAndSettle();
+    expect(find.byType(MethodologyScreen), findsOneWidget);
+    expect(find.textContaining('25 de julio al 24 de agosto de 2026'), findsOneWidget);
   });
 }

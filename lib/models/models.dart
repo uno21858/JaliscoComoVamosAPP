@@ -3,6 +3,7 @@ export 'chart.dart';
 export 'data_filters.dart';
 export 'data_source.dart';
 export 'donation.dart';
+export 'methodology.dart';
 export 'report.dart';
 export 'survey.dart';
 export 'survey_draft.dart';

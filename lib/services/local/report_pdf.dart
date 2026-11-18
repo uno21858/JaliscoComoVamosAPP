@@ -103,9 +103,7 @@ Future<Uint8List> buildReportPdf(
         ),
       );
 
-  for (final section in sections) {
-    final data = section.data;
-    doc.addPage(
+  void addPage(List<pw.Widget> content) => doc.addPage(
       pw.MultiPage(
         pageFormat: PdfPageFormat.letter,
         margin: const pw.EdgeInsets.all(40),
@@ -144,30 +142,45 @@ Future<Uint8List> buildReportPdf(
             ],
           ),
         ),
-        build: (context) => [
-          pw.Text(Topics.nameOf(section.topicId),
-              style: pw.TextStyle(font: black, fontSize: 20, color: navy)),
-          pw.SizedBox(height: 2),
-          pw.Text(subtitle, style: caption),
-          pw.SizedBox(height: 16),
-          if (data == null)
-            pw.Text(
-              'Con estos filtros hay muy pocas respuestas para mostrar esta temática. '
-              'Por privacidad no mostramos resultados de grupos muy chicos.',
-              style: body,
-            )
-          else ...[
-            if (data.isSmallSample)
-              pw.Padding(
-                padding: const pw.EdgeInsets.only(bottom: 12),
-                child: pw.Text('Muestra pequeña: interpreta con cuidado.',
-                    style: body.copyWith(color: c(AppColors.wine), fontWeight: pw.FontWeight.bold)),
-              ),
-            for (final chart in data.charts) chartBlock(chart),
-          ],
-        ],
+        build: (context) => content,
       ),
     );
+
+  for (final section in sections) {
+    final data = section.data;
+    addPage([
+      pw.Text(Topics.nameOf(section.topicId),
+          style: pw.TextStyle(font: black, fontSize: 20, color: navy)),
+      pw.SizedBox(height: 2),
+      pw.Text(subtitle, style: caption),
+      pw.SizedBox(height: 16),
+      if (data == null)
+        pw.Text(
+          'Con estos filtros hay muy pocas respuestas para mostrar esta temática. '
+          'Por privacidad no mostramos resultados de grupos muy chicos.',
+          style: body,
+        )
+      else ...[
+        if (data.isSmallSample)
+          pw.Padding(
+            padding: const pw.EdgeInsets.only(bottom: 12),
+            child: pw.Text('Muestra pequeña: interpreta con cuidado.',
+                style: body.copyWith(color: c(AppColors.wine), fontWeight: pw.FontWeight.bold)),
+          ),
+        for (final chart in data.charts) chartBlock(chart),
+      ],
+    ]);
   }
+
+  addPage([
+    pw.Text('¿Cómo se hizo esta encuesta?',
+        style: pw.TextStyle(font: black, fontSize: 20, color: navy)),
+    for (final section in methodology) ...[
+      pw.SizedBox(height: 14),
+      pw.Text(section.title, style: body.copyWith(fontSize: 11.5, fontWeight: pw.FontWeight.bold)),
+      pw.SizedBox(height: 4),
+      for (final point in section.points) pw.Bullet(text: point, style: body, bulletColor: navy, bulletSize: 3),
+    ],
+  ]);
   return doc.save();
 }

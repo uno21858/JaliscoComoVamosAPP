@@ -90,6 +90,7 @@ Una encuesta por temática con **las mismas preguntas y opciones del AMG** que s
 | 2.5 Detalle | `screens/data/chart_detail_screen.dart` |
 | 2.6 Generar informe | `screens/data/report_screen.dart` |
 | 2.7 Vista previa | `screens/data/report_preview_screen.dart` |
+| Metodología (nueva) | `screens/data/methodology_screen.dart` |
 | 3.4 Lista, 3.13 Retomar | `screens/surveys/survey_list_screen.dart` |
 | 3.5, 3.6 Aviso de privacidad | `screens/surveys/privacy_notice_screen.dart` |
 | 3.7 a 3.10, 3.12 Preguntas | `screens/surveys/survey_screen.dart` |
@@ -119,6 +120,7 @@ Los números son sintéticos. En dev aparece la etiqueta "Datos de ejemplo" para
 - El informe PDF se arma en el teléfono (`services/local/report_pdf.dart`); en papel todas las gráficas van en barras. "Compartir" en el detalle copia el dato y su fuente.
 - Por petición de JCV: sin filtro por municipio (v1.07) y sin mostrar cuántas respuestas hay (ni n, ni total, ni en el chat).
 - Gráficas: dona hasta 6 opciones, anillos para preguntas de grupo (sus % no suman 100) y barras de 7 opciones en adelante.
+- Se agregó la pantalla de metodología (JCV la pidió): se abre desde Datos y desde el detalle, y también va al final del PDF. El texto vive en `models/methodology.dart`. Faltan datos que solo JCV tiene: cómo se levantó, diseño de la muestra, margen de error y quién hizo las entrevistas.
 - Se agregó "Comparar AMG vs Tec" al final de cada temática; en el wireflow solo se llegaba desde Filtros.
 - La rueda de edad va de 18 a 29, por BR-13.
 

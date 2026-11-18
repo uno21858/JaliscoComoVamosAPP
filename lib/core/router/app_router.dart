@@ -5,6 +5,7 @@ import '../../models/models.dart';
 import '../../screens/assistant/assistant_screen.dart';
 import '../../screens/data/chart_detail_screen.dart';
 import '../../screens/data/comparison_screen.dart';
+import '../../screens/data/methodology_screen.dart';
 import '../../screens/data/report_preview_screen.dart';
 import '../../screens/data/report_screen.dart';
 import '../../screens/data/topic_screen.dart';
@@ -78,6 +79,10 @@ GoRouter buildRouter() {
         redirect: (context, state) => state.extra is ReportRequest ? null : AppRoutes.report,
         builder: (context, state) =>
             ReportPreviewScreen(request: state.extra! as ReportRequest),
+      ),
+      GoRoute(
+        path: AppRoutes.methodology,
+        builder: (context, state) => const MethodologyScreen(),
       ),
 
       // ENCUESTAS

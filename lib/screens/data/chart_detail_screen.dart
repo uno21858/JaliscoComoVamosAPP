@@ -125,6 +125,13 @@ class _DetailView extends StatelessWidget {
                   color: AppColors.textSecondary,
                 ),
               ),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: ChevronLink(
+                  label: 'Ver metodología',
+                  onPressed: () => context.push(AppRoutes.methodology),
+                ),
+              ),
               const MockDataBanner(padding: EdgeInsets.only(top: 12)),
               const SizedBox(height: 18),
               Row(
