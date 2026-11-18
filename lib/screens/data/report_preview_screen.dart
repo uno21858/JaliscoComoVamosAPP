@@ -45,7 +45,6 @@ class _ReportPreviewScreenState extends State<ReportPreviewScreen> {
     final pages = request.topicIds.length;
     final subtitle = [
       request.source.longLabel,
-      request.filters.municipalityLabel,
       request.filters.ageLabel,
     ].join(' · ');
 

@@ -39,13 +39,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     _Slide(
       CupertinoIcons.person_3_fill,
       'Lo que viven los jóvenes del AMG',
-      'La Encuesta de Bienestar de Jóvenes 2026 de Jalisco Cómo Vamos: '
-          '1,207 jóvenes de 15 a 29 años.',
+      'La Encuesta de Bienestar de Jóvenes 2026 de Jalisco Cómo Vamos, '
+          'con jóvenes de 15 a 29 años del Área Metropolitana de Guadalajara.',
     ),
     _Slide(
       CupertinoIcons.chart_bar_alt_fill,
       'Explora por tema',
-      'Gráficas de 8 temas, con filtros por municipio, edad, sexo y estrato.',
+      'Gráficas de 8 temas, con filtros por edad, sexo y estrato.',
     ),
     _Slide(
       CupertinoIcons.chat_bubble_2_fill,

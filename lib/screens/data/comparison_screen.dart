@@ -123,26 +123,26 @@ class _ComparisonList extends StatelessWidget {
         pills,
         const SizedBox(height: 14),
         const MockDataBanner(padding: EdgeInsets.fromLTRB(20, 0, 20, 14)),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 20),
           child: JcvCard(
             radius: 14,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: Row(
               children: [
                 Expanded(
                   child: SeriesKey(
                     color: AppColors.navy,
                     title: 'AMG 2026',
-                    subtitle: 'n = ${Formatters.thousands(data.nAmg)}',
+                    subtitle: 'Encuesta de JCV',
                   ),
                 ),
-                const SizedBox(width: 12),
+                SizedBox(width: 12),
                 Expanded(
                   child: SeriesKey(
                     color: AppColors.gold,
                     title: 'Estudiantes Tec',
-                    subtitle: 'n = ${Formatters.thousands(data.nTec)}',
+                    subtitle: 'Encuestas en la app',
                   ),
                 ),
               ],

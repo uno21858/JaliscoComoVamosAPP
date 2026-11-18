@@ -501,8 +501,7 @@ class _MiniComparison extends StatelessWidget {
             ],
             const SizedBox(height: 8),
             Text(
-              'AMG 2026 · n = ${Formatters.thousands(figure.nAmg)} · '
-              '${tec != null ? 'Tec · n = ${Formatters.thousands(figure.nTec)}' : 'Tec: aún sin respuestas suficientes'}',
+              'AMG 2026 · ${tec != null ? 'Tec' : 'Tec: aún sin respuestas suficientes'}',
               style: const TextStyle(
                 fontSize: 10,
                 height: 14 / 10,

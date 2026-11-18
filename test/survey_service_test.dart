@@ -39,9 +39,10 @@ void main() {
     final s = SupabaseSurveyService.buildSurvey('educacion-trabajo', defsOf('educacion-trabajo'), educacion,
         askDemographics: true);
     expect(s.id, 'tec-educacion-trabajo');
-    expect(s.questions.map((q) => q.id).take(3), ['EDAD', 'SEXO', 'MUNICIPIO']);
+    expect(s.questions.map((q) => q.id).take(2), ['EDAD', 'SEXO']);
+    expect(s.questions.any((q) => q.id == 'MUNICIPIO'), isFalse, reason: 'JCV: sin municipio');
 
-    final multiple = s.questions[3];
+    final multiple = s.questions[2];
     expect(multiple.type, QuestionType.multiple);
     expect(multiple.text, '¿Cuáles de estas actividades haces a diario o de forma regular?');
     expect(multiple.options.first.label, 'Estudias (dentro del sistema escolar)');
@@ -131,10 +132,10 @@ void main() {
     expect(ninguna.values.toSet(), {2});
   });
 
-  test('datos generales: "otro", "prefiero no decir" y fuera del AMG', () {
+  test('datos generales: "otro" y "prefiero no decir"; el municipio no se guarda', () {
     expect(SupabaseSurveyService.demographicsFrom({'EDAD': 21, 'SEXO': 'X', 'MUNICIPIO': 'ZAP'}),
-        (edad: 21, sexo: 'O', municipio: 'ZAP'));
-    expect(SupabaseSurveyService.demographicsFrom({'EDAD': 18, 'SEXO': 'NR', 'MUNICIPIO': 'FUERA'}),
+        (edad: 21, sexo: 'O', municipio: null));
+    expect(SupabaseSurveyService.demographicsFrom({'EDAD': 18, 'SEXO': 'NR'}),
         (edad: 18, sexo: null, municipio: null));
     expect(SupabaseSurveyService.demographicsFrom({'Q_6': '5'}), isNull);
   });

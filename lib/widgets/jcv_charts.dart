@@ -12,6 +12,17 @@ String describeSlices(String title, List<ChartSlice> slices) {
   return '$title. ${parts.join('; ')}.';
 }
 
+/// Crece de 0 a 1 al aparecer. Sin animación si el teléfono pide menos movimiento.
+Widget _grow(BuildContext context, Widget Function(double t) builder) {
+  final still = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
+  return TweenAnimationBuilder<double>(
+    tween: Tween(begin: 0, end: 1),
+    duration: still ? Duration.zero : const Duration(milliseconds: 700),
+    curve: Curves.easeOutCubic,
+    builder: (context, t, _) => builder(t),
+  );
+}
+
 /// Dona con hueco al centro. Geometría del SVG del wireflow: caja de 132,
 /// radio 50, trazo 22, separación de 2 entre segmentos, empieza arriba.
 class DonutChart extends StatelessWidget {
@@ -44,9 +55,12 @@ class DonutChart extends StatelessWidget {
         child: Stack(
           alignment: Alignment.center,
           children: [
-            CustomPaint(
-              size: Size.square(size),
-              painter: _DonutPainter([for (final s in slices) s.percent]),
+            _grow(
+              context,
+              (t) => CustomPaint(
+                size: Size.square(size),
+                painter: _DonutPainter([for (final s in slices) s.percent], t),
+              ),
             ),
             Padding(
               padding: EdgeInsets.all(size * 0.27),
@@ -89,9 +103,10 @@ class DonutChart extends StatelessWidget {
 }
 
 class _DonutPainter extends CustomPainter {
-  const _DonutPainter(this.values);
+  const _DonutPainter(this.values, this.progress);
 
   final List<double> values;
+  final double progress;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -110,20 +125,22 @@ class _DonutPainter extends CustomPainter {
 
     const gapLength = 2.0; // en unidades del SVG
     const gap = gapLength / 50; // en radianes
-    var start = -math.pi / 2;
+    final limit = progress * 2 * math.pi;
+    var elapsed = 0.0;
     for (var i = 0; i < values.length; i++) {
       final full = values[i] / total * 2 * math.pi;
-      final sweep = values.length > 1 ? math.max(0.0, full - gap) : full;
+      final sweep = math.min(values.length > 1 ? math.max(0.0, full - gap) : full, limit - elapsed);
       if (sweep > 0) {
-        canvas.drawArc(rect, start, sweep, false, stroke..color = AppColors.series(i));
+        canvas.drawArc(
+            rect, -math.pi / 2 + elapsed, sweep, false, stroke..color = AppColors.series(i));
       }
-      start += full;
+      elapsed += full;
     }
   }
 
   @override
   bool shouldRepaint(_DonutPainter oldDelegate) {
-    if (oldDelegate.values.length != values.length) return true;
+    if (oldDelegate.progress != progress || oldDelegate.values.length != values.length) return true;
     for (var i = 0; i < values.length; i++) {
       if (oldDelegate.values[i] != values[i]) return true;
     }
@@ -200,74 +217,170 @@ class ChartLegend extends StatelessWidget {
   }
 }
 
-/// Barras horizontales con etiqueta a la izquierda y porcentaje a la derecha.
-/// Las barras se escalan contra el valor más alto; el número exacto va
-/// escrito al lado, así que la lectura no depende del largo.
+/// Riel gris que vale 100 % con el relleno del porcentaje.
+class _Track extends StatelessWidget {
+  const _Track({required this.fraction, required this.color});
+
+  final double fraction;
+  final Color color;
+
+  static const _height = 10.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final radius = BorderRadius.circular(_height / 2);
+    return Container(
+      height: _height,
+      alignment: Alignment.centerLeft,
+      decoration: BoxDecoration(color: AppColors.divider, borderRadius: radius),
+      child: FractionallySizedBox(
+        widthFactor: fraction.clamp(0.0, 1.0),
+        heightFactor: 1,
+        child: DecoratedBox(decoration: BoxDecoration(color: color, borderRadius: radius)),
+      ),
+    );
+  }
+}
+
+/// Barras para preguntas de 7 o más opciones (donde una dona ya no se lee):
+/// etiqueta y porcentaje arriba, riel abajo.
 class BarRows extends StatelessWidget {
-  const BarRows({
-    super.key,
-    required this.slices,
-    this.labelWidth = 96,
-    this.color = AppColors.navy,
-  });
+  const BarRows({super.key, required this.slices, this.color = AppColors.navy});
 
   final List<ChartSlice> slices;
-  final double labelWidth;
   final Color color;
 
   @override
   Widget build(BuildContext context) {
-    final maxValue = slices.fold<double>(0, (m, s) => math.max(m, s.percent));
+    const label = TextStyle(
+        fontSize: 12, height: 16 / 12, fontWeight: FontWeight.w600, color: AppColors.navy);
+    return _grow(
+      context,
+      (t) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (var i = 0; i < slices.length; i++) ...[
+            if (i > 0) const SizedBox(height: 12),
+            Semantics(
+              label: '${slices[i].label}: ${Formatters.percent(slices[i].percent)}',
+              excludeSemantics: true,
+              child: Column(
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(child: Text(slices[i].label, style: label)),
+                      const SizedBox(width: 8),
+                      Text(
+                        Formatters.percent(slices[i].percent),
+                        style: label.copyWith(fontWeight: FontWeight.w800),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 5),
+                  _Track(fraction: slices[i].percent / 100 * t, color: color),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Un anillo por inciso, cada uno de 0 a 100 %. Para las preguntas de grupo:
+/// sus porcentajes no suman 100, así que un pastel mentiría.
+class RingGrid extends StatelessWidget {
+  const RingGrid({super.key, required this.slices, this.ringSize = 68, this.columns = 3});
+
+  final List<ChartSlice> slices;
+  final double ringSize;
+  final int columns;
+
+  @override
+  Widget build(BuildContext context) {
+    const spacing = 12.0;
     return LayoutBuilder(
       builder: (context, constraints) {
-        final maxBar = math.max(0.0, constraints.maxWidth - labelWidth - 8 - 8 - 40);
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            for (var i = 0; i < slices.length; i++) ...[
-              if (i > 0) const SizedBox(height: 10),
-              ConstrainedBox(
-                constraints: const BoxConstraints(minHeight: 28),
-                child: Row(
-                  children: [
-                    SizedBox(
-                      width: labelWidth,
-                      child: Text(
-                        slices[i].label,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.navy,
+        final cell = (constraints.maxWidth - spacing * (columns - 1)) / columns;
+        final size = math.min(ringSize, cell);
+        return _grow(
+          context,
+          (t) => Wrap(
+            spacing: spacing,
+            runSpacing: 16,
+            children: [
+              for (final slice in slices)
+                Semantics(
+                  label: '${slice.label}: ${Formatters.percent(slice.percent)}',
+                  excludeSemantics: true,
+                  child: SizedBox(
+                    width: cell,
+                    child: Column(
+                      children: [
+                        SizedBox.square(
+                          dimension: size,
+                          child: CustomPaint(
+                            painter: _RingPainter(slice.percent / 100 * t),
+                            child: Center(
+                              child: Text(
+                                Formatters.percent(slice.percent),
+                                style: TextStyle(
+                                  fontSize: size * 0.21,
+                                  fontWeight: FontWeight.w900,
+                                  color: AppColors.navy,
+                                ),
+                              ),
+                            ),
+                          ),
                         ),
-                      ),
+                        const SizedBox(height: 6),
+                        Text(
+                          slice.label,
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            height: 14 / 11,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.navy,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 8),
-                    Container(
-                      width: maxValue > 0 ? math.max(2.0, slices[i].percent / maxValue * maxBar) : 2.0,
-                      height: 12,
-                      decoration: BoxDecoration(
-                        color: color,
-                        borderRadius: const BorderRadius.horizontal(right: Radius.circular(4)),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      Formatters.percent(slices[i].percent),
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.navy,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
-              ),
             ],
-          ],
+          ),
         );
       },
     );
   }
+}
+
+class _RingPainter extends CustomPainter {
+  const _RingPainter(this.fraction);
+
+  final double fraction;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final stroke = size.width * 0.12;
+    final rect =
+        Rect.fromCircle(center: size.center(Offset.zero), radius: (size.width - stroke) / 2);
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = stroke
+      ..strokeCap = StrokeCap.round;
+    canvas.drawArc(rect, 0, 2 * math.pi, false, paint..color = AppColors.divider);
+    final sweep = fraction.clamp(0.0, 1.0) * 2 * math.pi;
+    if (sweep > 0) canvas.drawArc(rect, -math.pi / 2, sweep, false, paint..color = AppColors.navy);
+  }
+
+  @override
+  bool shouldRepaint(_RingPainter oldDelegate) => oldDelegate.fraction != fraction;
 }
 
 /// Barras pareadas AMG (azul) contra Tec (dorado) para la comparativa (2.4).
@@ -278,24 +391,17 @@ class ComparisonBars extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final maxValue = rows.fold<double>(0, (m, r) => math.max(m, math.max(r.amg, r.tec)));
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final maxBar = math.max(0.0, constraints.maxWidth - 8 - 40);
-        Widget bar(double value, Color color) {
-          return Row(
-            children: [
-              Container(
-                width: maxValue > 0 ? math.max(2.0, value / maxValue * maxBar) : 2.0,
-                height: 12,
-                decoration: BoxDecoration(
-                  color: color,
-                  borderRadius: const BorderRadius.horizontal(right: Radius.circular(4)),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text(
+    return _grow(context, (t) {
+      Widget bar(double value, Color color) {
+        return Row(
+          children: [
+            Expanded(child: _Track(fraction: value / 100 * t, color: color)),
+            const SizedBox(width: 8),
+            SizedBox(
+              width: 44,
+              child: Text(
                 Formatters.percent(value),
+                textAlign: TextAlign.end,
                 style: const TextStyle(
                   fontSize: 11,
                   height: 12 / 11,
@@ -303,48 +409,48 @@ class ComparisonBars extends StatelessWidget {
                   color: AppColors.navy,
                 ),
               ),
-            ],
-          );
-        }
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            for (var i = 0; i < rows.length; i++) ...[
-              if (i > 0) const SizedBox(height: 14),
-              Semantics(
-                label: '${rows[i].label}: AMG ${Formatters.percent(rows[i].amg)}, '
-                    'Tec ${Formatters.percent(rows[i].tec)}',
-                excludeSemantics: true,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      rows[i].label,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        height: 16 / 12,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.navy,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    bar(rows[i].amg, AppColors.navy),
-                    const SizedBox(height: 4),
-                    bar(rows[i].tec, AppColors.gold),
-                  ],
-                ),
-              ),
-            ],
+            ),
           ],
         );
-      },
-    );
+      }
+
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (var i = 0; i < rows.length; i++) ...[
+            if (i > 0) const SizedBox(height: 14),
+            Semantics(
+              label: '${rows[i].label}: AMG ${Formatters.percent(rows[i].amg)}, '
+                  'Tec ${Formatters.percent(rows[i].tec)}',
+              excludeSemantics: true,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    rows[i].label,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      height: 16 / 12,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.navy,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  bar(rows[i].amg, AppColors.navy),
+                  const SizedBox(height: 4),
+                  bar(rows[i].tec, AppColors.gold),
+                ],
+              ),
+            ),
+          ],
+        ],
+      );
+    });
   }
 }
 
-/// Muestra de color + nombre de la serie + n (leyenda de la comparativa).
+/// Muestra de color + nombre de la serie + nota (leyenda de la comparativa).
 class SeriesKey extends StatelessWidget {
   const SeriesKey({super.key, required this.color, required this.title, required this.subtitle});
 

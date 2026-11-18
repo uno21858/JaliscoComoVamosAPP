@@ -204,7 +204,7 @@ class SupabaseDataService implements DataRepository {
       topicId: def.topicId,
       title: def.title,
       subtitle: subtitle,
-      kind: !def.isGroup && slices.length <= 4 ? ChartKind.donut : ChartKind.bars,
+      kind: def.isGroup ? ChartKind.rings : slices.length <= 6 ? ChartKind.donut : ChartKind.bars,
       slices: slices,
       summary: Summaries.chart(slices, multipleChoice: def.isGroup),
       n: _n(graficas.first!),

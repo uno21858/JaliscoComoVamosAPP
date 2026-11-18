@@ -76,8 +76,7 @@ class _TopicsScreenState extends State<TopicsScreen> {
                     if (sample != null) ...[
                       const SizedBox(height: 2),
                       Text(
-                        '${Formatters.thousands(sample.total)} jóvenes de '
-                        '${sample.minAge} a ${sample.maxAge} años · ${sample.edition}',
+                        'Jóvenes de ${sample.minAge} a ${sample.maxAge} años · ${sample.edition}',
                         style: AppTextStyles.caption,
                       ),
                     ],

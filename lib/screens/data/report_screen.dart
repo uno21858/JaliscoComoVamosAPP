@@ -119,8 +119,6 @@ class _ReportScreenState extends State<ReportScreen> {
                     children: [
                       _SummaryRow(label: 'Fuente', value: filters.source.longLabel),
                       const SizedBox(height: 6),
-                      _SummaryRow(label: 'Municipio', value: filters.filters.municipalityLabel),
-                      const SizedBox(height: 6),
                       _SummaryRow(
                         label: 'Edad · sexo · estrato',
                         value: filters.filters.ageSexStratumSummary,

@@ -100,22 +100,23 @@ class TopicChartCard extends StatelessWidget {
             Text(subtitle, style: AppTextStyles.caption),
           ],
           const SizedBox(height: 12),
-          if (chart.kind == ChartKind.donut)
-            Row(
-              children: [
-                DonutChart(
-                  slices: chart.slices,
-                  size: 120,
-                  centerValue: Formatters.percent(first.percent),
-                  centerLabel: first.label.toLowerCase(),
-                  semanticLabel: describeSlices(chart.title, chart.slices),
-                ),
-                const SizedBox(width: 14),
-                Expanded(child: ChartLegend(slices: chart.slices)),
-              ],
-            )
-          else
-            BarRows(slices: chart.slices),
+          switch (chart.kind) {
+            ChartKind.donut => Row(
+                children: [
+                  DonutChart(
+                    slices: chart.slices,
+                    size: 120,
+                    centerValue: Formatters.percent(first.percent),
+                    centerLabel: first.label.toLowerCase(),
+                    semanticLabel: describeSlices(chart.title, chart.slices),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(child: ChartLegend(slices: chart.slices)),
+                ],
+              ),
+            ChartKind.rings => RingGrid(slices: chart.slices),
+            ChartKind.bars => BarRows(slices: chart.slices),
+          },
           const SizedBox(height: 12),
           PlainSummaryBox(text: chart.summary),
           Align(

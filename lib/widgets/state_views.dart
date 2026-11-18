@@ -234,7 +234,7 @@ class TooFewStateView extends StatelessWidget {
       icon: CupertinoIcons.tray,
       title: 'Aún no hay suficientes respuestas',
       message: 'Con estos filtros hay muy pocas respuestas para mostrar una gráfica confiable.',
-      note: 'Por privacidad no mostramos grupos con menos de $minSample respuestas.',
+      note: 'Por privacidad no mostramos resultados de grupos muy chicos.',
       actions: [
         JcvButton(
           label: 'Quitar filtros',

@@ -27,26 +27,26 @@ final q6 = grafica('Q_6', [
 GraficaJson siNo(String variable, double si) => grafica(variable, [(1, 'Sí', si), (2, 'No', 100 - si)]);
 
 void main() {
-  test('pregunta normal: todas sus respuestas, barras si son más de 4', () {
+  test('pregunta normal: todas sus respuestas, dona hasta 6 opciones', () {
     final def = graficasDestacadas.firstWhere((d) => d.id == 'bienestar-vida');
     final chart = SupabaseDataService.buildChart(def, {'Q_6': q6}, DataSource.amg)!;
     expect(chart.slices, hasLength(6));
     expect(chart.top.label, 'Muy satisfecha(o)');
     expect(chart.top.percent, 54.8);
-    expect(chart.kind, ChartKind.bars);
+    expect(chart.kind, ChartKind.donut);
     expect(chart.n, 1207);
     expect(chart.subtitle, 'AMG 2026');
     expect(chart.summary, contains('Muy satisfecha(o)'));
   });
 
-  test('grupo: una barra por inciso con la suma de los códigos', () {
+  test('grupo: un anillo por inciso con la suma de los códigos', () {
     final def = graficasDestacadas.firstWhere((d) => d.id == 'educacion-actividades');
     final data = {
       for (final (i, v) in def.variables.indexed) v: siNo(v, [37.5, 46.9, 34.6, 40.0, 20.0][i]),
     };
     final chart = SupabaseDataService.buildChart(def, data, DataSource.amg)!;
     expect(chart.multipleChoice, isTrue);
-    expect(chart.kind, ChartKind.bars);
+    expect(chart.kind, ChartKind.rings);
     expect(chart.slices.map((s) => s.label).first, 'Estudia');
     expect(chart.slices.first.percent, 37.5);
     expect(chart.subtitle, '% que lo hace a diario o de forma regular · AMG 2026');

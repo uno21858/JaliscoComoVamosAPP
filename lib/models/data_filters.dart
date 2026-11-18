@@ -104,7 +104,6 @@ class DataFilters {
 
   /// Chips blancos que van después del chip de fuente (2.2, 2.4, 2.9).
   List<String> get chipLabels => [
-        municipalityLabel,
         ageLabel,
         if (sex != null) sexLabel,
         if (stratum != null) 'Estrato ${stratumLabel.toLowerCase()}',

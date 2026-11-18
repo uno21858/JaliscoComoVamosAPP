@@ -74,8 +74,8 @@ class _DetailView extends StatelessWidget {
         ),
       ViewStatus.ready => () {
           final chart = controller.data!;
-          final meta = '${source.longLabel} · ${filters.filters.ageLabel} · '
-              'n = ${Formatters.thousands(chart.n)}';
+          // Sin n: JCV pidió no mostrar cuántas respuestas hay.
+          final meta = '${source.longLabel} · ${filters.filters.ageLabel}';
           return ListView(
             padding: EdgeInsets.fromLTRB(20, 16, 20, 24 + MediaQuery.paddingOf(context).bottom),
             children: [
@@ -93,21 +93,23 @@ class _DetailView extends StatelessWidget {
               const SizedBox(height: 14),
               JcvCard(
                 padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
-                child: chart.kind == ChartKind.donut
-                    ? Column(
-                        children: [
-                          DonutChart(
-                            slices: chart.slices,
-                            size: 180,
-                            centerValue: Formatters.percent(chart.slices.first.percent),
-                            centerLabel: chart.slices.first.label.toLowerCase(),
-                            semanticLabel: describeSlices(chart.title, chart.slices),
-                          ),
-                          const SizedBox(height: 16),
-                          ChartLegend(slices: chart.slices, columns: 2, fontSize: 12),
-                        ],
-                      )
-                    : BarRows(slices: chart.slices, labelWidth: 110),
+                child: switch (chart.kind) {
+                  ChartKind.donut => Column(
+                      children: [
+                        DonutChart(
+                          slices: chart.slices,
+                          size: 180,
+                          centerValue: Formatters.percent(chart.slices.first.percent),
+                          centerLabel: chart.slices.first.label.toLowerCase(),
+                          semanticLabel: describeSlices(chart.title, chart.slices),
+                        ),
+                        const SizedBox(height: 16),
+                        ChartLegend(slices: chart.slices, columns: 2, fontSize: 12),
+                      ],
+                    ),
+                  ChartKind.rings => RingGrid(slices: chart.slices, ringSize: 84),
+                  ChartKind.bars => BarRows(slices: chart.slices),
+                },
               ),
               const SizedBox(height: 14),
               SummaryCard(text: chart.summary),

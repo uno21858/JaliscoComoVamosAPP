@@ -71,15 +71,15 @@ class _FiltersSheetState extends State<FiltersSheet> {
     Navigator.of(context).pop(_source);
   }
 
+  /// Sin números: JCV pidió no mostrar cuántas respuestas hay. Solo avisa si
+  /// con estos filtros no alcanza para mostrar gráficas.
   String get _countText {
     final count = _count;
-    if (count == null) return 'Contando respuestas…';
-    if (count.belowThreshold) {
-      return 'Menos de ${count.threshold} respuestas con estos filtros';
+    if (count == null) return 'Revisando respuestas…';
+    if (count.belowThreshold || count.count == 0) {
+      return 'Con estos filtros hay muy pocas respuestas para mostrar resultados.';
     }
-    if (count.count == 0) return 'No se encontraron resultados';
-    final noun = count.count == 1 ? 'respuesta' : 'respuestas';
-    return '${Formatters.thousands(count.count)} $noun con estos filtros';
+    return 'Hay suficientes respuestas con estos filtros.';
   }
 
   @override
@@ -146,26 +146,6 @@ class _FiltersSheetState extends State<FiltersSheet> {
                         ),
                       ),
                   },
-                ),
-              ),
-              const SizedBox(height: 16),
-              const _GroupLabel('Municipio'),
-              _Lockable(
-                locked: !_filters.canSet(_filters.municipality),
-                child: EvenGrid(
-                  columns: 3,
-                  children: [
-                    for (final option in FilterCatalog.municipalities)
-                      SelectChip(
-                        label: option.label,
-                        selected: _filters.municipality == option.code,
-                        onTap: () => _update(
-                          filters: _filters.withMunicipality(
-                            _filters.municipality == option.code ? null : option.code,
-                          ),
-                        ),
-                      ),
-                  ],
                 ),
               ),
               const SizedBox(height: 16),

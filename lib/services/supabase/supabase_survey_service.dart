@@ -19,7 +19,8 @@ typedef Demographics = ({int edad, String? sexo, String? municipio});
 /// la encuesta AMG que salen en Datos (graficasDestacadas). Se guardan con
 /// jcv.guardar_encuesta como fuente TEC, así la comparativa sale sola.
 ///
-/// Edad, sexo y municipio se preguntan una vez y se guardan en el teléfono.
+/// Edad y sexo se preguntan una vez y se guardan en el teléfono. El municipio
+/// no se pregunta: JCV pidió no filtrar por municipio.
 class SupabaseSurveyService implements SurveyRepository {
   SupabaseSurveyService(this._client, this._store);
 
@@ -179,22 +180,6 @@ class SupabaseSurveyService implements SurveyRepository {
         QuestionOption('NR', 'Prefiero no decir'),
       ],
     ),
-    Question(
-      id: 'MUNICIPIO',
-      text: '¿En qué municipio vives?',
-      type: QuestionType.single,
-      helper: 'Elige una opción.',
-      options: [
-        QuestionOption('GDL', 'Guadalajara'),
-        QuestionOption('ZAP', 'Zapopan'),
-        QuestionOption('TLQ', 'San Pedro Tlaquepaque'),
-        QuestionOption('TON', 'Tonalá'),
-        QuestionOption('TLJ', 'Tlajomulco de Zúñiga'),
-        QuestionOption('ELS', 'El Salto'),
-        QuestionOption('OTRO', 'Otro municipio del AMG'),
-        QuestionOption('FUERA', 'Fuera del AMG'),
-      ],
-    ),
   ];
 
   /// Grupo Sí/No: 1 pregunta. Grupo de escala: 1 por inciso. Sola: 1.
@@ -322,16 +307,12 @@ class SupabaseSurveyService implements SurveyRepository {
     return codes;
   }
 
-  /// Edad, sexo y municipio si vienen en estas respuestas (primera encuesta).
-  /// "Otro"/"Prefiero no decir" y municipios fuera de los 6 del AMG van como null.
+  /// Edad y sexo si vienen en estas respuestas (primera encuesta). "Otro" va
+  /// como O y "Prefiero no decir" como null. El municipio ya no se pregunta.
   static Demographics? demographicsFrom(Map<String, Object> answers) {
     if (answers['EDAD'] case final int edad) {
       final sexo = switch (answers['SEXO']) { 'F' => 'F', 'M' => 'M', 'X' => 'O', _ => null };
-      final municipio = switch (answers['MUNICIPIO']) {
-        final String m when const {'GDL', 'ZAP', 'TLQ', 'TON', 'TLJ', 'ELS'}.contains(m) => m,
-        _ => null,
-      };
-      return (edad: edad, sexo: sexo, municipio: municipio);
+      return (edad: edad, sexo: sexo, municipio: null);
     }
     return null;
   }

@@ -1,4 +1,6 @@
-enum ChartKind { donut, bars }
+/// donut: una respuesta, hasta 6 opciones. rings: grupo (cada inciso de 0 a 100 %).
+/// bars: una respuesta con 7 o más opciones.
+enum ChartKind { donut, rings, bars }
 
 /// Una categoría de respuesta con su porcentaje (0 a 100).
 class ChartSlice {

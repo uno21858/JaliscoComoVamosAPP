@@ -42,14 +42,15 @@ void main() {
 
   group('DataFilters', () {
     test('etiquetas de chips por defecto', () {
-      expect(DataFilters.none.chipLabels, ['Todos los municipios', '15 a 29 años']);
+      // Sin municipio: JCV pidió no filtrar por municipio.
+      expect(DataFilters.none.chipLabels, ['15 a 29 años']);
     });
 
     test('etiquetas con filtros', () {
-      const filters = DataFilters(municipality: 'ZAP', ageGroup: '20-24', stratum: 'ALTO');
-      expect(filters.chipLabels, ['Zapopan', '20 a 24 años', 'Estrato alto']);
+      const filters = DataFilters(ageGroup: '20-24', stratum: 'ALTO');
+      expect(filters.chipLabels, ['20 a 24 años', 'Estrato alto']);
       expect(filters.ageSexStratumSummary, '20 a 24 · Todos · Alto');
-      expect(filters.activeCount, 3);
+      expect(filters.activeCount, 2);
     });
 
     test('quitar un filtro con null', () {
