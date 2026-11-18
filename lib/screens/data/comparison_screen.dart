@@ -159,7 +159,7 @@ class _ComparisonList extends StatelessWidget {
                 children: [
                   Text(chart.title, style: AppTextStyles.cardTitle),
                   const SizedBox(height: 14),
-                  ComparisonBars(rows: chart.rows),
+                  ComparisonRings(rows: chart.rows),
                   Align(
                     alignment: Alignment.centerRight,
                     child: ChevronLink(

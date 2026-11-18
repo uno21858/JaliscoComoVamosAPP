@@ -217,86 +217,71 @@ class ChartLegend extends StatelessWidget {
   }
 }
 
-/// Riel gris que vale 100 % con el relleno del porcentaje.
-class _Track extends StatelessWidget {
-  const _Track({required this.fraction, required this.color});
-
-  final double fraction;
-  final Color color;
-
-  static const _height = 10.0;
-
-  @override
-  Widget build(BuildContext context) {
-    final radius = BorderRadius.circular(_height / 2);
-    return Container(
-      height: _height,
-      alignment: Alignment.centerLeft,
-      decoration: BoxDecoration(color: AppColors.divider, borderRadius: radius),
-      child: FractionallySizedBox(
-        widthFactor: fraction.clamp(0.0, 1.0),
-        heightFactor: 1,
-        child: DecoratedBox(decoration: BoxDecoration(color: color, borderRadius: radius)),
-      ),
-    );
-  }
-}
-
-/// Barras para preguntas de 7 o más opciones (donde una dona ya no se lee):
-/// etiqueta y porcentaje arriba, riel abajo.
-class BarRows extends StatelessWidget {
-  const BarRows({super.key, required this.slices, this.color = AppColors.navy});
-
-  final List<ChartSlice> slices;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    const label = TextStyle(
-        fontSize: 12, height: 16 / 12, fontWeight: FontWeight.w600, color: AppColors.navy);
-    return _grow(
-      context,
-      (t) => Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          for (var i = 0; i < slices.length; i++) ...[
-            if (i > 0) const SizedBox(height: 12),
-            Semantics(
-              label: '${slices[i].label}: ${Formatters.percent(slices[i].percent)}',
-              excludeSemantics: true,
-              child: Column(
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(child: Text(slices[i].label, style: label)),
-                      const SizedBox(width: 8),
-                      Text(
-                        Formatters.percent(slices[i].percent),
-                        style: label.copyWith(fontWeight: FontWeight.w800),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 5),
-                  _Track(fraction: slices[i].percent / 100 * t, color: color),
-                ],
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-/// Un anillo por inciso, cada uno de 0 a 100 %. Para las preguntas de grupo:
-/// sus porcentajes no suman 100, así que un pastel mentiría.
+/// Un anillo por opción, cada uno de 0 a 100 %. Para las preguntas de grupo
+/// (sus porcentajes no suman 100, así que un pastel mentiría) y para las de 7 o
+/// más opciones, donde una dona ya no se lee.
 class RingGrid extends StatelessWidget {
   const RingGrid({super.key, required this.slices, this.ringSize = 68, this.columns = 3});
 
   final List<ChartSlice> slices;
   final double ringSize;
   final int columns;
+
+  @override
+  Widget build(BuildContext context) => _RingWrap(
+        ringSize: ringSize,
+        columns: columns,
+        rings: [
+          for (final s in slices)
+            (
+              label: s.label,
+              semantics: '${s.label}: ${Formatters.percent(s.percent)}',
+              arcs: [(s.percent, AppColors.navy)],
+            ),
+        ],
+      );
+}
+
+/// Anillos dobles para la comparativa (2.4): AMG afuera (azul), Tec adentro (dorado).
+class ComparisonRings extends StatelessWidget {
+  const ComparisonRings({super.key, required this.rows, this.ringSize = 76, this.columns = 3});
+
+  final List<ComparisonRow> rows;
+  final double ringSize;
+  final int columns;
+
+  @override
+  Widget build(BuildContext context) => _RingWrap(
+        ringSize: ringSize,
+        columns: columns,
+        rings: [
+          for (final r in rows)
+            (
+              label: r.label,
+              semantics: '${r.label}: AMG ${Formatters.percent(r.amg)}, '
+                  'Tec ${Formatters.percent(r.tec)}',
+              arcs: [(r.amg, AppColors.navy), (r.tec, AppColors.gold)],
+            ),
+        ],
+      );
+}
+
+/// Porcentaje (0 a 100) y color de cada arco, de afuera hacia adentro.
+typedef _Ring = ({String label, String semantics, List<(double, Color)> arcs});
+
+class _RingWrap extends StatelessWidget {
+  const _RingWrap({required this.rings, required this.ringSize, required this.columns});
+
+  final List<_Ring> rings;
+  final double ringSize;
+  final int columns;
+
+  static const _value = TextStyle(
+    fontSize: 11,
+    height: 14 / 11,
+    fontWeight: FontWeight.w800,
+    color: AppColors.navy,
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -311,9 +296,9 @@ class RingGrid extends StatelessWidget {
             spacing: spacing,
             runSpacing: 16,
             children: [
-              for (final slice in slices)
+              for (final ring in rings)
                 Semantics(
-                  label: '${slice.label}: ${Formatters.percent(slice.percent)}',
+                  label: ring.semantics,
                   excludeSemantics: true,
                   child: SizedBox(
                     width: cell,
@@ -322,22 +307,46 @@ class RingGrid extends StatelessWidget {
                         SizedBox.square(
                           dimension: size,
                           child: CustomPaint(
-                            painter: _RingPainter(slice.percent / 100 * t),
-                            child: Center(
-                              child: Text(
-                                Formatters.percent(slice.percent),
-                                style: TextStyle(
-                                  fontSize: size * 0.21,
-                                  fontWeight: FontWeight.w900,
-                                  color: AppColors.navy,
-                                ),
-                              ),
-                            ),
+                            painter: _RingPainter([for (final (v, c) in ring.arcs) (v / 100 * t, c)]),
+                            child: ring.arcs.length == 1
+                                ? Center(
+                                    child: Text(
+                                      Formatters.percent(ring.arcs.single.$1),
+                                      style: TextStyle(
+                                        fontSize: size * 0.21,
+                                        fontWeight: FontWeight.w900,
+                                        color: AppColors.navy,
+                                      ),
+                                    ),
+                                  )
+                                : null,
                           ),
                         ),
+                        if (ring.arcs.length > 1) ...[
+                          const SizedBox(height: 6),
+                          Wrap(
+                            spacing: 8,
+                            alignment: WrapAlignment.center,
+                            children: [
+                              for (final (v, c) in ring.arcs)
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(
+                                      width: 7,
+                                      height: 7,
+                                      decoration: BoxDecoration(color: c, shape: BoxShape.circle),
+                                    ),
+                                    const SizedBox(width: 3),
+                                    Text(Formatters.percent(v), style: _value),
+                                  ],
+                                ),
+                            ],
+                          ),
+                        ],
                         const SizedBox(height: 6),
                         Text(
-                          slice.label,
+                          ring.label,
                           maxLines: 3,
                           overflow: TextOverflow.ellipsis,
                           textAlign: TextAlign.center,
@@ -361,93 +370,30 @@ class RingGrid extends StatelessWidget {
 }
 
 class _RingPainter extends CustomPainter {
-  const _RingPainter(this.fraction);
+  const _RingPainter(this.arcs);
 
-  final double fraction;
+  /// Fracción de 0 a 1 y color, de afuera hacia adentro.
+  final List<(double, Color)> arcs;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final stroke = size.width * 0.12;
-    final rect =
-        Rect.fromCircle(center: size.center(Offset.zero), radius: (size.width - stroke) / 2);
+    final stroke = size.width * (arcs.length == 1 ? 0.12 : 0.1);
     final paint = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = stroke
       ..strokeCap = StrokeCap.round;
-    canvas.drawArc(rect, 0, 2 * math.pi, false, paint..color = AppColors.divider);
-    final sweep = fraction.clamp(0.0, 1.0) * 2 * math.pi;
-    if (sweep > 0) canvas.drawArc(rect, -math.pi / 2, sweep, false, paint..color = AppColors.navy);
+    for (var i = 0; i < arcs.length; i++) {
+      final radius = (size.width - stroke) / 2 - i * stroke * 1.4;
+      final rect = Rect.fromCircle(center: size.center(Offset.zero), radius: radius);
+      canvas.drawArc(rect, 0, 2 * math.pi, false, paint..color = AppColors.divider);
+      final sweep = arcs[i].$1.clamp(0.0, 1.0) * 2 * math.pi;
+      if (sweep > 0) canvas.drawArc(rect, -math.pi / 2, sweep, false, paint..color = arcs[i].$2);
+    }
   }
 
+  // ponytail: se repinta en cada cuadro de la animación de todos modos.
   @override
-  bool shouldRepaint(_RingPainter oldDelegate) => oldDelegate.fraction != fraction;
-}
-
-/// Barras pareadas AMG (azul) contra Tec (dorado) para la comparativa (2.4).
-class ComparisonBars extends StatelessWidget {
-  const ComparisonBars({super.key, required this.rows});
-
-  final List<ComparisonRow> rows;
-
-  @override
-  Widget build(BuildContext context) {
-    return _grow(context, (t) {
-      Widget bar(double value, Color color) {
-        return Row(
-          children: [
-            Expanded(child: _Track(fraction: value / 100 * t, color: color)),
-            const SizedBox(width: 8),
-            SizedBox(
-              width: 44,
-              child: Text(
-                Formatters.percent(value),
-                textAlign: TextAlign.end,
-                style: const TextStyle(
-                  fontSize: 11,
-                  height: 12 / 11,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.navy,
-                ),
-              ),
-            ),
-          ],
-        );
-      }
-
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          for (var i = 0; i < rows.length; i++) ...[
-            if (i > 0) const SizedBox(height: 14),
-            Semantics(
-              label: '${rows[i].label}: AMG ${Formatters.percent(rows[i].amg)}, '
-                  'Tec ${Formatters.percent(rows[i].tec)}',
-              excludeSemantics: true,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    rows[i].label,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      height: 16 / 12,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.navy,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  bar(rows[i].amg, AppColors.navy),
-                  const SizedBox(height: 4),
-                  bar(rows[i].tec, AppColors.gold),
-                ],
-              ),
-            ),
-          ],
-        ],
-      );
-    });
-  }
+  bool shouldRepaint(_RingPainter oldDelegate) => true;
 }
 
 /// Muestra de color + nombre de la serie + nota (leyenda de la comparativa).

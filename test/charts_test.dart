@@ -53,14 +53,15 @@ void main() {
     expect(find.bySemanticsLabel(RegExp(r'número 1: 3%')), findsOneWidget);
   });
 
-  testWidgets('barras: 12 opciones con su %', (tester) async {
-    await pumpAt(tester, BarRows(slices: muchas));
+  testWidgets('anillos: 12 opciones de una sola respuesta', (tester) async {
+    await pumpAt(tester, RingGrid(slices: muchas));
     expect(find.text('Opción con texto largo 12'), findsOneWidget);
     expect(find.text('1%'), findsOneWidget);
   });
 
-  testWidgets('comparativa: AMG y Tec con el mismo riel', (tester) async {
-    await pumpAt(tester, const ComparisonBars(rows: [ComparisonRow('Muy feliz', 51.5, 63.2)]));
+  testWidgets('comparativa: anillo doble AMG y Tec', (tester) async {
+    await pumpAt(tester, const ComparisonRings(rows: [ComparisonRow('Muy feliz', 51.5, 63.2)]));
+    expect(find.bySemanticsLabel('Muy feliz: AMG 52%, Tec 63%'), findsOneWidget);
     expect(find.text('52%'), findsOneWidget);
     expect(find.text('63%'), findsOneWidget);
   });

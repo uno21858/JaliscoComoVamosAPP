@@ -115,7 +115,6 @@ class TopicChartCard extends StatelessWidget {
                 ],
               ),
             ChartKind.rings => RingGrid(slices: chart.slices),
-            ChartKind.bars => BarRows(slices: chart.slices),
           },
           const SizedBox(height: 12),
           PlainSummaryBox(text: chart.summary),

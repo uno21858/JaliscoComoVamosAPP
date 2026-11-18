@@ -108,7 +108,6 @@ class _DetailView extends StatelessWidget {
                       ],
                     ),
                   ChartKind.rings => RingGrid(slices: chart.slices, ringSize: 84),
-                  ChartKind.bars => BarRows(slices: chart.slices),
                 },
               ),
               const SizedBox(height: 14),

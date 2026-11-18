@@ -1,6 +1,6 @@
-/// donut: una respuesta, hasta 6 opciones. rings: grupo (cada inciso de 0 a 100 %).
-/// bars: una respuesta con 7 o más opciones.
-enum ChartKind { donut, rings, bars }
+/// donut: una respuesta, hasta 6 opciones. rings: grupo (cada inciso de 0 a
+/// 100 %) o 7 o más opciones. Sin barras: JCV las quiso fuera de la app.
+enum ChartKind { donut, rings }
 
 /// Una categoría de respuesta con su porcentaje (0 a 100).
 class ChartSlice {
