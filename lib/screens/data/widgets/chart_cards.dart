@@ -89,7 +89,7 @@ class TopicChartCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final subtitle = chart.subtitle;
-    final first = chart.slices.first;
+    final top = chart.top; // la opción más elegida va al centro de la dona
     return JcvCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -106,8 +106,8 @@ class TopicChartCard extends StatelessWidget {
                   DonutChart(
                     slices: chart.slices,
                     size: 120,
-                    centerValue: Formatters.percent(first.percent),
-                    centerLabel: first.label.toLowerCase(),
+                    centerValue: Formatters.percent(top.percent),
+                    centerLabel: top.label.toLowerCase(),
                     semanticLabel: describeSlices(chart.title, chart.slices),
                   ),
                   const SizedBox(width: 14),

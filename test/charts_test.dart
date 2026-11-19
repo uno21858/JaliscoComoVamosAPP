@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jcv_app/models/chart.dart';
+import 'package:jcv_app/screens/data/widgets/chart_cards.dart';
 import 'package:jcv_app/widgets/jcv_charts.dart';
 
 const feliz = [
@@ -64,5 +65,21 @@ void main() {
     expect(find.bySemanticsLabel('Muy feliz: AMG 52%, Tec 63%'), findsOneWidget);
     expect(find.text('52%'), findsOneWidget);
     expect(find.text('63%'), findsOneWidget);
+  });
+
+  testWidgets('la dona pone al centro la opción más elegida, no la primera', (tester) async {
+    // Con datos reales las opciones vienen en orden de código: "Nada…" va primero.
+    const chart = TopicChart(
+      id: 'q6',
+      topicId: 'bienestar',
+      title: 'Satisfacción con su vida',
+      kind: ChartKind.donut,
+      slices: [ChartSlice('Nada satisfecha', 0.8), ChartSlice('Algo satisfecha', 36.4), ChartSlice('Muy satisfecha', 54.8)],
+      summary: '',
+      n: 1000,
+    );
+    await pumpAt(tester, TopicChartCard(chart: chart, onDetail: () {}));
+    expect(find.text('55%'), findsNWidgets(2)); // centro + leyenda
+    expect(find.text('muy satisfecha'), findsOneWidget);
   });
 }

@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:ui' show Color;
 
@@ -15,7 +16,7 @@ typedef ReportSection = ({String topicId, TopicCharts? data});
 
 /// Arma el PDF del informe (RF-DAT-10) en el teléfono, con los mismos
 /// agregados del dashboard. Sin n: JCV pidió no mostrar cuántas respuestas hay.
-/// ponytail: en papel todo va en barras; se imprimen y se leen bien en gris.
+/// Mismas gráficas que la app: dona hasta 6 opciones, anillos en lo demás.
 Future<Uint8List> buildReportPdf(
   ReportRequest request,
   List<ReportSection> sections, {
@@ -39,44 +40,119 @@ Future<Uint8List> buildReportPdf(
     theme: pw.ThemeData.withFont(base: await font('Regular'), bold: await font('Bold')),
   );
 
-  const barWidth = 220.0;
-  pw.Widget row(ChartSlice slice) => pw.Padding(
-        padding: const pw.EdgeInsets.only(bottom: 5),
-        child: pw.Row(
-          children: [
-            pw.Expanded(child: pw.Text(slice.label, style: body.copyWith(fontSize: 9))),
-            pw.SizedBox(width: 8),
-            pw.Stack(
-              children: [
-                pw.Container(
-                  width: barWidth,
-                  height: 7,
-                  decoration: pw.BoxDecoration(
-                    color: c(AppColors.divider),
-                    borderRadius: pw.BorderRadius.circular(3.5),
-                  ),
-                ),
-                pw.Container(
-                  width: barWidth * (slice.percent / 100).clamp(0.0, 1.0),
-                  height: 7,
-                  decoration:
-                      pw.BoxDecoration(color: navy, borderRadius: pw.BorderRadius.circular(3.5)),
-                ),
-              ],
-            ),
-            pw.SizedBox(
-              width: 40,
-              child: pw.Text(
-                Formatters.percent(slice.percent),
-                textAlign: pw.TextAlign.right,
-                style: body.copyWith(fontWeight: pw.FontWeight.bold),
-              ),
-            ),
-          ],
+  // Arco en sentido horario desde las 12. En el PDF el origen está abajo a la
+  // izquierda; se traza con segmentos cortos (3°) en lugar de bezierArc.
+  void arc(PdfGraphics g, double r, double size, double from, double sweep) {
+    final steps = math.max(2, (sweep / (math.pi / 60)).ceil());
+    for (var i = 0; i <= steps; i++) {
+      final a = from + sweep * i / steps;
+      final x = size / 2 + r * math.sin(a);
+      final y = size / 2 + r * math.cos(a);
+      if (i == 0) {
+        g.moveTo(x, y);
+      } else {
+        g.lineTo(x, y);
+      }
+    }
+    g.strokePath();
+  }
+
+  pw.Widget centered(double size, String text, double fontSize) => pw.SizedBox(
+        width: size,
+        height: size,
+        child: pw.Center(
+          child: pw.Text(text, style: pw.TextStyle(font: black, fontSize: fontSize, color: navy)),
         ),
       );
 
-  pw.Widget chartBlock(TopicChart chart) => pw.Container(
+  /// Una respuesta, hasta 6 opciones: dona con hueco y leyenda. Al centro, la más elegida.
+  pw.Widget donut(TopicChart chart) {
+    final slices = chart.slices;
+    const size = 96.0, stroke = 18.0, gap = 0.04;
+    return pw.Row(
+      children: [
+        pw.CustomPaint(
+          size: const PdfPoint(size, size),
+          painter: (g, _) {
+            g
+              ..setLineWidth(stroke)
+              ..setLineCap(PdfLineCap.butt);
+            var start = 0.0;
+            for (final (i, slice) in slices.indexed) {
+              final sweep = slice.percent / 100 * 2 * math.pi;
+              if (sweep > gap) {
+                g.setStrokeColor(c(AppColors.series(i)));
+                arc(g, (size - stroke) / 2, size, start, sweep - gap);
+              }
+              start += sweep;
+            }
+          },
+          child: centered(size, Formatters.percent(chart.top.percent), 15),
+        ),
+        pw.SizedBox(width: 18),
+        pw.Expanded(
+          child: pw.Column(
+            children: [
+              for (final (i, slice) in slices.indexed)
+                pw.Padding(
+                  padding: const pw.EdgeInsets.only(bottom: 4),
+                  child: pw.Row(
+                    children: [
+                      pw.Container(
+                        width: 7,
+                        height: 7,
+                        decoration: pw.BoxDecoration(
+                            color: c(AppColors.series(i)), shape: pw.BoxShape.circle),
+                      ),
+                      pw.SizedBox(width: 6),
+                      pw.Expanded(child: pw.Text(slice.label, style: body.copyWith(fontSize: 9))),
+                      pw.Text(Formatters.percent(slice.percent),
+                          style: body.copyWith(fontWeight: pw.FontWeight.bold)),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Un anillo de 0 a 100 % por inciso u opción (grupos y 7 o más opciones).
+  pw.Widget ring(ChartSlice slice) {
+    const size = 50.0, stroke = size * 0.12;
+    return pw.SizedBox(
+      width: 122,
+      child: pw.Column(
+        children: [
+          pw.CustomPaint(
+            size: const PdfPoint(size, size),
+            painter: (g, _) {
+              g
+                ..setLineWidth(stroke)
+                ..setLineCap(PdfLineCap.round)
+                ..setLineJoin(PdfLineJoin.round)
+                ..setStrokeColor(c(AppColors.divider));
+              arc(g, (size - stroke) / 2, size, 0, 2 * math.pi);
+              final fraction = (slice.percent / 100).clamp(0.0, 1.0);
+              if (fraction > 0) {
+                g.setStrokeColor(navy);
+                arc(g, (size - stroke) / 2, size, 0, fraction * 2 * math.pi);
+              }
+            },
+            child: centered(size, Formatters.percent(slice.percent), 10.5),
+          ),
+          pw.SizedBox(height: 4),
+          pw.Text(slice.label,
+              textAlign: pw.TextAlign.center, maxLines: 3, style: caption.copyWith(color: navy)),
+        ],
+      ),
+    );
+  }
+
+  // Inseparable: título, gráfica y resumen van juntos a la siguiente página si no caben.
+  pw.Widget chartBlock(TopicChart chart) => pw.Inseparable(
+          child: pw.Container(
         margin: const pw.EdgeInsets.only(bottom: 18),
         child: pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -87,7 +163,15 @@ Future<Uint8List> buildReportPdf(
             if (chart.multipleChoice)
               pw.Text('Cada inciso va por separado: los porcentajes no suman 100.', style: caption),
             pw.SizedBox(height: 8),
-            for (final slice in chart.slices) row(slice),
+            if (chart.kind == ChartKind.donut)
+              donut(chart)
+            else
+              pw.Wrap(
+                spacing: 10,
+                runSpacing: 12,
+                children: [for (final slice in chart.slices) ring(slice)],
+              ),
+            pw.SizedBox(height: 6),
             if (request.plainSummaries)
               pw.Container(
                 width: double.infinity,
@@ -101,50 +185,50 @@ Future<Uint8List> buildReportPdf(
               ),
           ],
         ),
-      );
+      ));
 
   void addPage(List<pw.Widget> content) => doc.addPage(
-      pw.MultiPage(
-        pageFormat: PdfPageFormat.letter,
-        margin: const pw.EdgeInsets.all(40),
-        header: (context) => pw.Column(
-          crossAxisAlignment: pw.CrossAxisAlignment.start,
-          children: [
-            pw.Text('Informe · Jalisco Cómo Vamos',
-                style: pw.TextStyle(font: black, fontSize: 10, color: navy)),
-            pw.SizedBox(height: 6),
-            pw.Row(
-              children: [
-                for (final color in AppColors.brandBar)
-                  pw.Expanded(child: pw.Container(height: 3, color: c(color))),
-              ],
-            ),
-            pw.SizedBox(height: 16),
-          ],
-        ),
-        footer: (context) => pw.Padding(
-          padding: const pw.EdgeInsets.only(top: 12),
-          child: pw.Row(
-            crossAxisAlignment: pw.CrossAxisAlignment.end,
+        pw.MultiPage(
+          pageFormat: PdfPageFormat.letter,
+          margin: const pw.EdgeInsets.all(40),
+          header: (context) => pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              pw.Expanded(
-                child: pw.Text(
-                  'Fuente: Encuesta de Bienestar de Jóvenes 2026, Jalisco Cómo Vamos. '
-                  'Porcentajes ponderados. Generado el $fecha.',
-                  style: caption.copyWith(fontSize: 7.5),
-                ),
+              pw.Text('Informe · Jalisco Cómo Vamos',
+                  style: pw.TextStyle(font: black, fontSize: 10, color: navy)),
+              pw.SizedBox(height: 6),
+              pw.Row(
+                children: [
+                  for (final color in AppColors.brandBar)
+                    pw.Expanded(child: pw.Container(height: 3, color: c(color))),
+                ],
               ),
-              pw.SizedBox(width: 12),
-              pw.Text(
-                'Página ${context.pageNumber} de ${context.pagesCount}',
-                style: caption.copyWith(fontSize: 7.5),
-              ),
+              pw.SizedBox(height: 16),
             ],
           ),
+          footer: (context) => pw.Padding(
+            padding: const pw.EdgeInsets.only(top: 12),
+            child: pw.Row(
+              crossAxisAlignment: pw.CrossAxisAlignment.end,
+              children: [
+                pw.Expanded(
+                  child: pw.Text(
+                    'Fuente: Encuesta de Bienestar de Jóvenes 2026, Jalisco Cómo Vamos. '
+                    'Porcentajes ponderados. Generado el $fecha.',
+                    style: caption.copyWith(fontSize: 7.5),
+                  ),
+                ),
+                pw.SizedBox(width: 12),
+                pw.Text(
+                  'Página ${context.pageNumber} de ${context.pagesCount}',
+                  style: caption.copyWith(fontSize: 7.5),
+                ),
+              ],
+            ),
+          ),
+          build: (context) => content,
         ),
-        build: (context) => content,
-      ),
-    );
+      );
 
   for (final section in sections) {
     final data = section.data;
@@ -179,7 +263,8 @@ Future<Uint8List> buildReportPdf(
       pw.SizedBox(height: 14),
       pw.Text(section.title, style: body.copyWith(fontSize: 11.5, fontWeight: pw.FontWeight.bold)),
       pw.SizedBox(height: 4),
-      for (final point in section.points) pw.Bullet(text: point, style: body, bulletColor: navy, bulletSize: 3),
+      for (final point in section.points)
+        pw.Bullet(text: point, style: body, bulletColor: navy, bulletSize: 3),
     ],
   ]);
   return doc.save();

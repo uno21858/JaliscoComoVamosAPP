@@ -126,7 +126,7 @@ class _ReportPreviewScreenState extends State<ReportPreviewScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Página ${_page + 1} de $pages',
+                  'Temática ${_page + 1} de $pages',
                   textAlign: TextAlign.center,
                   style: const TextStyle(
                     fontSize: 12,
@@ -221,17 +221,8 @@ class _PagePreview extends StatelessWidget {
           ),
         );
 
-    Widget bar(double width, Color color) => Container(
-          width: width,
-          height: 5,
-          decoration: BoxDecoration(
-            color: color,
-            borderRadius: const BorderRadius.horizontal(right: Radius.circular(2)),
-          ),
-        );
-
     return Semantics(
-      label: 'Vista previa de la página $pageNumber del informe: $title',
+      label: 'Vista previa de la temática $pageNumber del informe: $title',
       excludeSemantics: true,
       child: Container(
         width: 250,
@@ -276,18 +267,11 @@ class _PagePreview extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 10),
-            for (final (amg, tec) in const [
-              (120.0, 156.0),
-              (48.0, 55.0),
-              (34.0, 11.0),
-              (28.0, 7.0)
-            ]) ...[
-              bar(amg, AppColors.navy),
-              const SizedBox(height: 2),
-              bar(tec, AppColors.gold),
-              const SizedBox(height: 5),
-            ],
-            const SizedBox(height: 6),
+            const RingGrid(
+              ringSize: 38,
+              columns: 4,
+              slices: [ChartSlice('', 71), ChartSlice('', 54), ChartSlice('', 33), ChartSlice('', 22)],
+            ),
             line(1),
             const SizedBox(height: 8),
             line(0.92),
@@ -326,7 +310,7 @@ class _PagePreview extends StatelessWidget {
             Align(
               alignment: Alignment.centerRight,
               child: Text(
-                'Página $pageNumber',
+                'Temática $pageNumber',
                 style: const TextStyle(
                   fontSize: 6,
                   fontWeight: FontWeight.w600,

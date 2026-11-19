@@ -118,7 +118,7 @@ Los números son sintéticos. En dev aparece la etiqueta "Datos de ejemplo" para
 
 - Sin login: Encuestas entra directo a la lista y el texto del aviso ya no menciona el correo.
 - La hoja de pago es simulada y no captura tarjeta. En producción la dibuja Stripe.
-- El informe PDF se arma en el teléfono (`services/local/report_pdf.dart`); en papel todas las gráficas van en barras. "Compartir" en el detalle copia el dato y su fuente.
+- El informe PDF se arma en el teléfono (`services/local/report_pdf.dart`) con las mismas gráficas que la app (donas y anillos) y una página de metodología al final. "Compartir" en el detalle copia el dato y su fuente.
 - Por petición de JCV: sin filtro por municipio (v1.07) y sin mostrar cuántas respuestas hay (ni n, ni total, ni en el chat).
 - Gráficas: dona hasta 6 opciones; anillos para preguntas de grupo (sus % no suman 100) y de 7 opciones en adelante; anillos dobles en la comparativa AMG vs Tec. Sin barras en la app (JCV): `python3 scripts/check_sin_barras.py` lo revisa.
 - Se agregó la pantalla de metodología (JCV la pidió): se abre desde Datos y desde el detalle, y también va al final del PDF. El texto vive en `models/methodology.dart`. Faltan datos que solo JCV tiene: cómo se levantó, diseño de la muestra, margen de error y quién hizo las entrevistas.

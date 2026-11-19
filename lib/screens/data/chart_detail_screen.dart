@@ -99,8 +99,8 @@ class _DetailView extends StatelessWidget {
                         DonutChart(
                           slices: chart.slices,
                           size: 180,
-                          centerValue: Formatters.percent(chart.slices.first.percent),
-                          centerLabel: chart.slices.first.label.toLowerCase(),
+                          centerValue: Formatters.percent(chart.top.percent),
+                          centerLabel: chart.top.label.toLowerCase(),
                           semanticLabel: describeSlices(chart.title, chart.slices),
                         ),
                         const SizedBox(height: 16),
