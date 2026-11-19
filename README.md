@@ -41,7 +41,7 @@ lib/
   widgets/        design system del wireflow
   screens/        una carpeta por flujo: home, data, surveys, donate, assistant
 SQLScripts/       migraciones vX.XX_*.sql del schema jcv (se corren en orden)
-scripts/          importar_amg.py + cargar_amg.sql (datos de JCV), deploy_asistente.sh
+scripts/          importar_amg.py + cargar_amg.sql (datos de JCV), validar_datos.py, check_sin_barras.py, deploy_asistente.sh
 supabase/         edge functions, una carpeta por función (como CCL, no supabase/functions/)
 ```
 
@@ -51,6 +51,7 @@ Vive en el proyecto Supabase de **CCL DEV**, aislado en el schema `jcv` (expuest
 
 - **Datos:** `jcv.personas` (municipio, edad, sexo, estrato, factor), `jcv.respuestas` (formato largo) y `jcv.preguntas` (catálogo). `jcv.grafica()` pondera con el factor de expansión y cuenta "No sabe/No contestó" en la base, igual que los cruces de JCV (verificado: 764 porcentajes, 0 diferencias).
 - **Cargar la base de JCV:** `python3 -I scripts/importar_amg.py "<carpeta de datos>"` genera los CSV en `~/Downloads/jcv_import` (fuera del repo; se quitan colonia, fecha y respuestas abiertas) y se suben con `scripts/cargar_amg.sql` o desde el Table Editor, en orden: preguntas, personas, respuestas.
+- **Validar los datos:** `python3 scripts/validar_datos.py "<carpeta de datos>"` compara las RPC de DEV contra la hoja RESUMEN del Excel de JCV (total, sexo, edad y estrato) y, lo que no está ahí, contra los microdatos. Correrlo después de recargar datos o cambiar el SQL. Nota: el Excel de JCV trae mal la columna de 15 a 19 años en "Te sientes enojada(o)" (suma 146 %); la RPC cuadra con los microdatos.
 - **Edge Function `jcv-asistente`:** Haiku elige la pregunta y los filtros, consulta `jcv.grafica` y redacta. Toda cifra del texto se revisa contra la DB; si no cuadra, se responde con plantilla. Deploy: `sh scripts/deploy_asistente.sh`. Secret: `ANTHROPIC_API_KEY`.
 - **Límites:** 20 preguntas al día y 10 por minuto por dispositivo (id aleatorio guardado en el teléfono); 1000 al día y 60 por minuto por IP. El tope de dinero es el límite de gasto en la consola de Anthropic.
 - **Caché:** el system prompt se cachea en Anthropic y las preguntas repetidas sin historial salen de `jcv.cache_respuestas`. Si cambias prompt, modelo o datos, sube `CACHE_VERSION` en la función.
