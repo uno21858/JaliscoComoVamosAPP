@@ -35,9 +35,10 @@ class _ReportPreviewScreenState extends State<ReportPreviewScreen> {
     super.dispose();
   }
 
+  /// Con una temática lleva su nombre; con varias, solo "informe-jcv".
   String get _fileName {
-    final first = widget.request.topicIds.first;
-    return 'informe-jcv-$first.pdf';
+    final ids = widget.request.topicIds;
+    return ids.length == 1 ? 'informe-jcv-${ids.single}.pdf' : 'informe-jcv.pdf';
   }
 
   void _snack(String text) {
