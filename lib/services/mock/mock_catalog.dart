@@ -39,7 +39,6 @@ abstract final class MockCatalog {
   static const minSample = 30;
 
   static const sampleInfo = SampleInfo(
-    total: amgSampleSize,
     minAge: 15,
     maxAge: 29,
     edition: 'AMG 2026',

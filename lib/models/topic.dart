@@ -37,13 +37,11 @@ abstract final class Topics {
 /// Ficha de la muestra que se muestra en 2.1 y en los pies de gráfica.
 class SampleInfo {
   const SampleInfo({
-    required this.total,
     required this.minAge,
     required this.maxAge,
     required this.edition,
   });
 
-  final int total;
   final int minAge;
   final int maxAge;
   final String edition; // "AMG 2026"

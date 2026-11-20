@@ -4,8 +4,6 @@ class AssistantFigure {
     required this.caption,
     required this.amg,
     required this.tec,
-    required this.nAmg,
-    required this.nTec,
   });
 
   final String caption;
@@ -13,8 +11,6 @@ class AssistantFigure {
 
   /// null: todavía no hay suficientes respuestas del Tec (umbral de privacidad).
   final double? tec;
-  final int nAmg;
-  final int nTec;
 }
 
 /// Respuesta del asistente. Haiku redacta, pero cada cifra del texto la

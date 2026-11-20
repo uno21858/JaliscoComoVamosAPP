@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math';
 
 import 'package:supabase/supabase.dart';
 
@@ -59,10 +58,8 @@ class SupabaseDataService implements DataRepository {
   Future<Result<List<Topic>>> getTopics() async => const Ok(Topics.all);
 
   @override
-  Future<Result<SampleInfo>> getSampleInfo() => guardResult(() async {
-        final count = await _contar('AMG', DataFilters.none);
-        return SampleInfo(total: count.count, minAge: 15, maxAge: 29, edition: 'AMG 2026');
-      });
+  Future<Result<SampleInfo>> getSampleInfo() async =>
+      const Ok(SampleInfo(minAge: 15, maxAge: 29, edition: 'AMG 2026'));
 
   @override
   Future<Result<List<Highlight>>> getHighlights() => guardResult(() async {
@@ -96,12 +93,12 @@ class SupabaseDataService implements DataRepository {
           for (final d in defs)
             if (buildChart(d, data, source) case final chart?) chart,
         ];
-        if (fuente == 'AMG') return Enough(TopicCharts(charts: charts, n: count.count));
+        if (fuente == 'AMG') return Enough(TopicCharts(charts: charts, isSmallSample: count.smallSample));
         // Tec: cada encuesta contestada cuenta como una persona aparte (no se ligan,
-        // RF-ENC-09), así que el total de personas sale inflado. La n real es la
-        // de las gráficas, y si ninguna llega al umbral no hay nada que mostrar.
+        // RF-ENC-09), así que el total de personas sale inflado. Cada gráfica trae
+        // su propio umbral, y si ninguna lo pasa no hay nada que mostrar.
         if (charts.isEmpty) return TooFew<TopicCharts>(count.threshold);
-        return Enough(TopicCharts(charts: charts, n: charts.map((c) => c.n).reduce(max)));
+        return Enough(TopicCharts(charts: charts));
       });
 
   @override
@@ -124,13 +121,9 @@ class SupabaseDataService implements DataRepository {
           for (final d in defs)
             if (buildComparison(d, amg, tec) case final chart?) chart,
         ];
-        // Igual que en getTopicCharts: la n del Tec sale de las gráficas.
+        // Igual que en getTopicCharts: el umbral del Tec lo deciden las gráficas.
         if (charts.isEmpty) return TooFew<ComparisonData>(tecCount.threshold);
-        return Enough(ComparisonData(
-          charts: charts,
-          nAmg: amgCount.count,
-          nTec: charts.map((c) => c.nTec).reduce(max),
-        ));
+        return Enough(ComparisonData(charts: charts));
       });
 
   @override
@@ -160,8 +153,7 @@ class SupabaseDataService implements DataRepository {
 
   static MatchCount parseCount(Object? data) {
     if (data case {'umbral': final num umbral, 'bajo_umbral': final bool bajo}) {
-      final n = data['n'];
-      return MatchCount(count: n is num ? n.toInt() : 0, belowThreshold: bajo, threshold: umbral.toInt());
+      return MatchCount(smallSample: data['muestra_pequena'] == true, belowThreshold: bajo, threshold: umbral.toInt());
     }
     throw const ServerError('contar sin formato');
   }
@@ -178,8 +170,6 @@ class SupabaseDataService implements DataRepository {
             if (o case {'codigo': final num codigo, 'etiqueta': final String etiqueta, 'porcentaje': final num pct})
               (codigo: codigo.toInt(), etiqueta: etiqueta, porcentaje: pct.toDouble()),
       ];
-
-  static int _n(GraficaJson g) => switch (g['n']) { final num n => n.toInt(), _ => 0 };
 
   /// Suma de los porcentajes de [codes], a un decimal ("algo" + "mucho").
   static double sumCodes(GraficaJson g, List<int> codes) {
@@ -207,7 +197,6 @@ class SupabaseDataService implements DataRepository {
       kind: !def.isGroup && slices.length <= 6 ? ChartKind.donut : ChartKind.rings,
       slices: slices,
       summary: Summaries.chart(slices, multipleChoice: def.isGroup),
-      n: _n(graficas.first!),
       multipleChoice: def.isGroup,
     );
   }
@@ -238,8 +227,6 @@ class SupabaseDataService implements DataRepository {
       topicId: def.topicId,
       title: def.title,
       rows: rows,
-      nAmg: _n(a.first!),
-      nTec: _n(t.first!),
       summary: Summaries.comparison(rows),
     );
   }

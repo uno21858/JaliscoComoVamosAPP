@@ -62,8 +62,6 @@ class MockAssistantService implements AssistantRepository {
         caption: label,
         amg: amgValue,
         tec: tecValue,
-        nAmg: MockCatalog.amgSampleSize,
-        nTec: MockCatalog.tecSampleSize,
       ),
     );
   }

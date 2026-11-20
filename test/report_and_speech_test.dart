@@ -32,7 +32,6 @@ const chart = TopicChart(
   kind: ChartKind.donut,
   slices: [ChartSlice('Muy satisfecha(o)', 54.8), ChartSlice('Algo satisfecha(o)', 36.4)],
   summary: 'Más de la mitad está muy satisfecha con su vida.',
-  n: 1207,
 );
 
 void main() {
@@ -46,7 +45,7 @@ void main() {
       plainSummaries: true,
     );
     final pdf = await buildReportPdf(request, [
-      (topicId: 'bienestar', data: const TopicCharts(charts: [chart], n: 1207)),
+      (topicId: 'bienestar', data: const TopicCharts(charts: [chart])),
       (topicId: 'seguridad', data: null),
     ], now: DateTime(2026, 11, 17));
     expect(ascii.decode(pdf.sublist(0, 5)), '%PDF-');

@@ -76,7 +76,7 @@ class _FiltersSheetState extends State<FiltersSheet> {
   String get _countText {
     final count = _count;
     if (count == null) return 'Revisando respuestas…';
-    if (count.belowThreshold || count.count == 0) {
+    if (count.belowThreshold) {
       return 'Con estos filtros hay muy pocas respuestas para mostrar resultados.';
     }
     return 'Hay suficientes respuestas con estos filtros.';

@@ -13,7 +13,8 @@ Qué hace: por cada pregunta de la hoja RESUMEN del Excel, pide a jcv.graficas
 (hombre/mujer, 3 edades, 3 estratos) y revisa que cada porcentaje coincida.
 Las preguntas que JCV no puso en el RESUMEN se comparan contra los microdatos.
 La RPC redondea a 1 decimal, así que se permite una diferencia de 0.06 puntos.
-Sale con 1 si encuentra diferencias. Solo imprime porcentajes, nunca conteos.
+Sale con 1 si encuentra diferencias o si la RPC regresa conteos (n).
+Solo imprime porcentajes, nunca conteos.
 
 Necesita openpyxl (pip install openpyxl).
 """
@@ -93,6 +94,9 @@ def main() -> int:
             for g in rpc(env, "graficas", {"p_variables": variables[i : i + 40], **filtros}):
                 rpc_por_col[col][g["variable"]] = g
     total = rpc_por_col[2]
+    # JCV pidió no mostrar cuántas respuestas hay: desde v1.08 la RPC no trae n.
+    if con_n := sorted({v for col in rpc_por_col.values() for v, g in col.items() if "n" in g}):
+        sys.exit(f"La RPC volvió a regresar n (conteos) en: {', '.join(con_n[:5])}")
     # Un texto puede ser de varias variables (Q_70 en minutos y Q_70recode por
     # rangos): se elige la que tenga la primera opción del bloque.
     por_texto = {}

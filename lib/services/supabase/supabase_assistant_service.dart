@@ -75,14 +75,10 @@ class SupabaseAssistantService implements AssistantRepository {
     if (amg is! num) return null;
     final tec = data['tec'];
     final caption = data['etiqueta'];
-    final nAmg = data['n_amg'];
-    final nTec = data['n_tec'];
     return AssistantFigure(
       caption: caption is String ? caption : '',
       amg: amg.toDouble(),
       tec: tec is num ? tec.toDouble() : null,
-      nAmg: nAmg is num ? nAmg.toInt() : 0,
-      nTec: nTec is num ? nTec.toInt() : 0,
     );
   }
 

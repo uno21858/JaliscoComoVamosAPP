@@ -15,8 +15,6 @@ void main() {
           'etiqueta': 'Camión/Macrobús (El Salto)',
           'amg': 29.7,
           'tec': null,
-          'n_amg': 23,
-          'n_tec': 0,
           'muestra_pequena': true,
         },
       });
@@ -25,14 +23,13 @@ void main() {
       expect(answer.figure!.caption, 'Camión/Macrobús (El Salto)');
       expect(answer.figure!.amg, 29.7);
       expect(answer.figure!.tec, isNull);
-      expect(answer.figure!.nAmg, 23);
     });
 
     test('amg entero, tema desconocido y figura nula', () {
       final conFigura = SupabaseAssistantService.parse({
         'texto': 'x',
         'tema': 'no-existe',
-        'figura': {'etiqueta': 'Sí', 'amg': 27, 'tec': 31, 'n_amg': 1207, 'n_tec': 40},
+        'figura': {'etiqueta': 'Sí', 'amg': 27, 'tec': 31},
       });
       expect(conFigura.topicId, isNull); // no rompe "Ver en Datos"
       expect(conFigura.figure!.amg, 27.0);

@@ -18,7 +18,6 @@ class TopicChart {
     required this.kind,
     required this.slices,
     required this.summary,
-    required this.n,
     this.subtitle,
     this.multipleChoice = false,
   });
@@ -32,9 +31,6 @@ class TopicChart {
 
   /// Resumen en lenguaje sencillo. Lo arma el servidor con una plantilla.
   final String summary;
-
-  /// Registros sin ponderar detrás de la gráfica.
-  final int n;
 
   /// Si se podían elegir varias opciones, los porcentajes no suman 100.
   final bool multipleChoice;
@@ -57,8 +53,6 @@ class ComparisonChart {
     required this.topicId,
     required this.title,
     required this.rows,
-    required this.nAmg,
-    required this.nTec,
     required this.summary,
   });
 
@@ -66,8 +60,6 @@ class ComparisonChart {
   final String topicId;
   final String title;
   final List<ComparisonRow> rows;
-  final int nAmg;
-  final int nTec;
   final String summary;
 }
 
@@ -94,26 +86,20 @@ class Highlight {
 
 /// Gráficas de una temática con los filtros aplicados.
 class TopicCharts {
-  const TopicCharts({required this.charts, required this.n});
+  const TopicCharts({required this.charts, this.isSmallSample = false});
 
   final List<TopicChart> charts;
-  final int n;
 
-  /// AMG con 1 ≤ n < 30: se muestra con aviso de muestra pequeña (RF-DAT-07).
-  bool get isSmallSample => n > 0 && n < 30;
+  /// AMG con menos de 30 respuestas: se muestra con aviso de muestra pequeña
+  /// (RF-DAT-07). El Tec nunca llega aquí con menos de 30.
+  final bool isSmallSample;
 }
 
 /// Comparativas de una temática con los filtros aplicados.
 class ComparisonData {
-  const ComparisonData({
-    required this.charts,
-    required this.nAmg,
-    required this.nTec,
-  });
+  const ComparisonData({required this.charts});
 
   final List<ComparisonChart> charts;
-  final int nAmg;
-  final int nTec;
 }
 
 /// Resultado que respeta el umbral de privacidad de la muestra Tec
@@ -132,13 +118,13 @@ final class TooFew<T> extends Gated<T> {
   final int minSample;
 }
 
-/// Cuántos registros coinciden con los filtros (contador de 2.3).
+/// Si con los filtros alcanza para mostrar gráficas (2.3). Sin conteo: JCV
+/// pidió no mostrar cuántas respuestas hay, y la base ya no lo regresa.
 class MatchCount {
-  const MatchCount({required this.count, required this.belowThreshold, required this.threshold});
+  const MatchCount({required this.smallSample, required this.belowThreshold, required this.threshold});
 
-  final int count;
-
-  /// Para Tec bajo el umbral nunca se muestra el número exacto (RF-DAT-04).
+  /// Menos de 30 respuestas, pero sobre el umbral.
+  final bool smallSample;
   final bool belowThreshold;
   final int threshold;
 }

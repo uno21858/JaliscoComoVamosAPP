@@ -43,7 +43,7 @@ const ESTRATOS = ["BAJO", "MEDIO", "ALTO"];
 
 type Opcion = { codigo: number; etiqueta: string; porcentaje: number | null };
 type Grafica = {
-  variable: string; tema: string; texto: string; n: number;
+  variable: string; tema: string; texto: string; // sin n desde v1.08
   muestra_pequena: boolean; insuficiente: boolean; opciones: Opcion[];
 };
 // Sin municipio: JCV pidió no filtrar por municipio (v1.07).
@@ -220,7 +220,7 @@ const SIN_DATOS =
   "Puedo contarte qué dicen los jóvenes del AMG sobre bienestar, educación y trabajo, tiempo libre, " +
   "hogar y familia, salud, seguridad, comunidad y transporte. ¿Qué te gustaría saber?";
 
-const conDatos = (consultas: Consulta[]) => consultas.filter((c) => c.amg.n > 0 && !c.amg.insuficiente);
+const conDatos = (consultas: Consulta[]) => consultas.filter((c) => !c.amg.insuficiente);
 
 /** Respuesta sin Haiku: una frase por consulta (máximo 3), solo con cifras de la DB. */
 function plantilla(consultas: Consulta[]): string {

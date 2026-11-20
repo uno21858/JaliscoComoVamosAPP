@@ -76,7 +76,6 @@ void main() {
       kind: ChartKind.donut,
       slices: [ChartSlice('Nada satisfecha', 0.8), ChartSlice('Algo satisfecha', 36.4), ChartSlice('Muy satisfecha', 54.8)],
       summary: '',
-      n: 1000,
     );
     await pumpAt(tester, TopicChartCard(chart: chart, onDetail: () {}));
     expect(find.text('55%'), findsNWidgets(2)); // centro + leyenda

@@ -3,13 +3,12 @@ import 'package:jcv_app/models/models.dart';
 import 'package:jcv_app/services/supabase/graficas_destacadas.dart';
 import 'package:jcv_app/services/supabase/supabase_data_service.dart';
 
-/// Forma de jcv.grafica (v1.02), con porcentajes reales de la base AMG.
-GraficaJson grafica(String variable, List<(int, String, double?)> opciones, {int? n = 1207, bool insuficiente = false}) => {
+/// Forma de jcv.grafica (v1.08, sin n), con porcentajes reales de la base AMG.
+GraficaJson grafica(String variable, List<(int, String, double?)> opciones, {bool insuficiente = false}) => {
       'variable': variable,
       'tema': 'bienestar',
-      'n': n,
       'insuficiente': insuficiente,
-      'muestra_pequena': (n ?? 0) < 30,
+      'muestra_pequena': false,
       'opciones': [
         for (final (codigo, etiqueta, pct) in opciones) {'codigo': codigo, 'etiqueta': etiqueta, 'porcentaje': pct},
       ],
@@ -34,7 +33,6 @@ void main() {
     expect(chart.top.label, 'Muy satisfecha(o)');
     expect(chart.top.percent, 54.8);
     expect(chart.kind, ChartKind.donut);
-    expect(chart.n, 1207);
     expect(chart.subtitle, 'AMG 2026');
     expect(chart.summary, contains('Muy satisfecha(o)'));
   });
@@ -58,18 +56,18 @@ void main() {
 
   test('si una pregunta no tiene suficientes respuestas, la gráfica se omite', () {
     final def = graficasDestacadas.firstWhere((d) => d.id == 'bienestar-vida');
-    final pocas = grafica('Q_6', [(1, 'Nada', null)], n: null, insuficiente: true);
+    final pocas = grafica('Q_6', [(1, 'Nada', null)], insuficiente: true);
     expect(SupabaseDataService.buildChart(def, {'Q_6': pocas}, DataSource.tec), isNull);
     expect(SupabaseDataService.buildChart(def, const {}, DataSource.amg), isNull);
   });
 
-  test('contador: Tec bajo el umbral no trae número', () {
-    final tec = SupabaseDataService.parseCount({'n': null, 'umbral': 30, 'bajo_umbral': true});
-    expect(tec.count, 0);
+  test('contar: solo banderas, nunca cuántas respuestas hay', () {
+    final tec = SupabaseDataService.parseCount({'umbral': 30, 'bajo_umbral': true, 'muestra_pequena': false});
     expect(tec.belowThreshold, isTrue);
     expect(tec.threshold, 30);
-    final amg = SupabaseDataService.parseCount({'n': 23, 'umbral': 10, 'bajo_umbral': false});
-    expect(amg.count, 23);
+    final amg = SupabaseDataService.parseCount({'umbral': 10, 'bajo_umbral': false, 'muestra_pequena': true});
+    expect(amg.belowThreshold, isFalse);
+    expect(amg.smallSample, isTrue);
     expect(() => SupabaseDataService.parseCount('x'), throwsA(anything));
   });
 

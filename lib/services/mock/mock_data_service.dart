@@ -67,9 +67,9 @@ class MockDataService implements DataRepository {
         final charts = [
           for (final seed in MockCatalog.chartsOf(topicId))
             if (effective == DataSource.amg || seed.tec != null)
-              _buildChart(seed, effective, filters, n),
+              _buildChart(seed, effective, filters),
         ];
-        return Enough(TopicCharts(charts: charts, n: n));
+        return Enough(TopicCharts(charts: charts, isSmallSample: n > 0 && n < 30));
       });
 
   @override
@@ -79,16 +79,14 @@ class MockDataService implements DataRepository {
   }) =>
       guardResult(() async {
         await simulateNetwork();
-        final nAmg = MockCatalog.countFor(DataSource.amg, filters);
-        final nTec = MockCatalog.countFor(DataSource.tec, filters);
-        if (nTec < MockCatalog.minSample) {
+        if (MockCatalog.countFor(DataSource.tec, filters) < MockCatalog.minSample) {
           return const TooFew<ComparisonData>(MockCatalog.minSample);
         }
         final charts = [
           for (final seed in MockCatalog.chartsOf(topicId))
-            if (seed.tec != null) _buildComparison(seed, filters, nAmg, nTec),
+            if (seed.tec != null) _buildComparison(seed, filters),
         ];
-        return Enough(ComparisonData(charts: charts, nAmg: nAmg, nTec: nTec));
+        return Enough(ComparisonData(charts: charts));
       });
 
   @override
@@ -107,7 +105,7 @@ class MockDataService implements DataRepository {
         if (effective == DataSource.tec && n < MockCatalog.minSample) {
           return const TooFew<TopicChart>(MockCatalog.minSample);
         }
-        return Enough(_buildChart(seed, effective, filters, n));
+        return Enough(_buildChart(seed, effective, filters));
       });
 
   @override
@@ -120,8 +118,8 @@ class MockDataService implements DataRepository {
         final effective = source == DataSource.amg ? DataSource.amg : DataSource.tec;
         final n = MockCatalog.countFor(effective, filters);
         return MatchCount(
-          count: n,
-          belowThreshold: effective == DataSource.tec && n < MockCatalog.minSample,
+          smallSample: n < 30,
+          belowThreshold: n == 0 || (effective == DataSource.tec && n < MockCatalog.minSample),
           threshold: MockCatalog.minSample,
         );
       });
@@ -130,7 +128,6 @@ class MockDataService implements DataRepository {
     ChartSeed seed,
     DataSource source,
     DataFilters filters,
-    int n,
   ) {
     final base = source == DataSource.tec ? seed.tec! : seed.amg;
     final values = MockCatalog.perturb(
@@ -153,7 +150,6 @@ class MockDataService implements DataRepository {
       kind: seed.kind,
       slices: slices,
       summary: _summaryFor(slices, multipleChoice: seed.multipleChoice),
-      n: n,
       multipleChoice: seed.multipleChoice,
     );
   }
@@ -161,8 +157,6 @@ class MockDataService implements DataRepository {
   ComparisonChart _buildComparison(
     ChartSeed seed,
     DataFilters filters,
-    int nAmg,
-    int nTec,
   ) {
     final amg = MockCatalog.perturb(seed.amg,
         chartId: seed.id, source: DataSource.amg, filters: filters, normalize: true);
@@ -176,8 +170,6 @@ class MockDataService implements DataRepository {
       topicId: seed.topicId,
       title: seed.title,
       rows: rows,
-      nAmg: nAmg,
-      nTec: nTec,
       summary: comparisonSummary(rows),
     );
   }
