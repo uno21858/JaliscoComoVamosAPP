@@ -10,6 +10,7 @@ import 'flavors/flavor_config.dart';
 import 'providers/providers.dart';
 import 'repositories/repositories.dart';
 import 'screens/donate/mock_payment_sheet.dart';
+import 'services/auth/auth_service.dart';
 import 'services/local/device_speech_input.dart';
 import 'services/local/local_store.dart';
 import 'services/local/survey_draft_storage.dart';
@@ -35,22 +36,40 @@ class AppDependencies {
     required this.assistant,
     required this.speech,
     required this.store,
+    required this.auth,
   });
 
   factory AppDependencies.create(FlavorConfig config) {
     final store = LocalStore();
     final donations = MockDonationService();
+    final drafts = SurveyDraftStorage(store);
     final supabase =
         config.hasSupabase ? SupabaseClient(config.supabaseUrl, config.supabaseAnonKey) : null;
+    final auth = config.hasCognito
+        ? AuthService(
+            userPoolId: config.cognitoUserPoolId,
+            clientId: config.cognitoClientId,
+            hostedUiDomain: config.cognitoDomain,
+          )
+        : null;
+    // Solo Encuestas manda el token de Cognito. Datos y el asistente siguen con
+    // la anon key: son públicos y la edge function tiene verify_jwt.
+    final surveysClient = supabase != null && auth != null
+        ? SupabaseClient(config.supabaseUrl, config.supabaseAnonKey, accessToken: auth.accessToken)
+        : null;
+    auth?.onSignedOut = () => SupabaseSurveyService.forgetLocal(store, drafts);
     return AppDependencies._(
       data: supabase != null ? SupabaseDataService(supabase) : MockDataService(),
-      surveys: supabase != null ? SupabaseSurveyService(supabase, store) : MockSurveyService(store),
-      drafts: SurveyDraftStorage(store),
+      surveys: surveysClient != null && auth != null
+          ? SupabaseSurveyService(surveysClient, store, auth)
+          : MockSurveyService(store),
+      drafts: drafts,
       donations: donations,
       payments: MockPaymentPresenter(donations),
       assistant: supabase != null ? SupabaseAssistantService(supabase, store) : MockAssistantService(),
       speech: supabase != null ? DeviceSpeechInput() : MockSpeechInput(),
       store: store,
+      auth: auth,
     );
   }
 
@@ -64,6 +83,9 @@ class AppDependencies {
 
   /// Almacenamiento cifrado del teléfono (bienvenida vista, borradores, id).
   final LocalStore store;
+
+  /// Null sin Cognito (pruebas): no hay login y Encuestas no lo pide.
+  final AuthService? auth;
 }
 
 class JcvApp extends StatefulWidget {
@@ -95,6 +117,7 @@ class _JcvAppState extends State<JcvApp> {
         Provider<AssistantRepository>.value(value: _deps.assistant),
         Provider<SpeechInput>.value(value: _deps.speech),
         Provider<LocalStore>.value(value: _deps.store),
+        ChangeNotifierProvider<AuthService?>.value(value: _deps.auth),
         ChangeNotifierProvider<DataFiltersProvider>(create: (_) => DataFiltersProvider()),
         ChangeNotifierProvider<SurveysProvider>(
           create: (_) => SurveysProvider(_deps.surveys, _deps.drafts),

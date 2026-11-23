@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/router/app_routes.dart';
 import '../../core/theme/app_colors.dart';
+import '../../services/auth/auth_service.dart';
 import '../../services/local/local_store.dart';
 import '../../widgets/widgets.dart';
 import '../onboarding/onboarding_screen.dart';
@@ -23,6 +24,7 @@ class SplashScreen extends StatefulWidget {
 class _SplashScreenState extends State<SplashScreen> {
   Timer? _timer;
   late final Future<bool> _seenWelcome;
+  late final Future<void> _session;
   bool _leaving = false;
 
   @override
@@ -31,6 +33,10 @@ class _SplashScreenState extends State<SplashScreen> {
     // Se lee mientras corre el splash, así no se alarga.
     _seenWelcome =
         context.read<LocalStore>().read(OnboardingScreen.seenKey).then((value) => value != null);
+    // La sesión guardada también se recupera aquí (refresca el token si venció).
+    // Sin red no se queda pegado: a los 5 s sigue (sin sesión por ahora).
+    _session = (context.read<AuthService?>()?.restore() ?? Future.value())
+        .timeout(const Duration(seconds: 5), onTimeout: () {});
     _timer = Timer(const Duration(milliseconds: 1400), _goHome);
   }
 
@@ -40,6 +46,7 @@ class _SplashScreenState extends State<SplashScreen> {
     _leaving = true;
     _timer?.cancel();
     final seen = await _seenWelcome;
+    await _session;
     if (mounted) context.go(seen ? AppRoutes.home : AppRoutes.welcome);
   }
 

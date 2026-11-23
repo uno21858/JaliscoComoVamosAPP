@@ -22,4 +22,7 @@ abstract interface class SurveyRepository {
   Future<bool> hasAcceptedPrivacy();
 
   Future<Result<void>> acceptPrivacy();
+
+  /// Borra lo que el servidor guarda de quien llama (antes de borrar la cuenta).
+  Future<Result<void>> deleteMyData();
 }

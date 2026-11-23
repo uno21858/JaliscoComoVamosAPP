@@ -3,6 +3,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../models/models.dart';
 import '../../screens/assistant/assistant_screen.dart';
+import '../../screens/auth/access_screen.dart';
+import '../../screens/auth/reset_password_screen.dart';
+import '../../screens/auth/verify_email_screen.dart';
 import '../../screens/data/chart_detail_screen.dart';
 import '../../screens/data/comparison_screen.dart';
 import '../../screens/data/methodology_screen.dart';
@@ -83,6 +86,23 @@ GoRouter buildRouter() {
       GoRoute(
         path: AppRoutes.methodology,
         builder: (context, state) => const MethodologyScreen(),
+      ),
+
+      // ACCESO
+      GoRoute(
+        path: AppRoutes.access,
+        builder: (context, state) =>
+            AccessScreen(register: state.uri.queryParameters['registro'] == '1'),
+      ),
+      GoRoute(
+        path: AppRoutes.verifyEmail,
+        redirect: (context, state) => state.extra is PendingSignUp ? null : AppRoutes.access,
+        builder: (context, state) => VerifyEmailScreen(pending: state.extra! as PendingSignUp),
+      ),
+      GoRoute(
+        path: AppRoutes.resetPassword,
+        builder: (context, state) =>
+            ResetPasswordScreen(initialEmail: state.extra is String ? state.extra! as String : ''),
       ),
 
       // ENCUESTAS

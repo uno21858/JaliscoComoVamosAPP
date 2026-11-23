@@ -9,6 +9,9 @@ class FlavorConfig {
     this.mockFailureRate = 0,
     this.supabaseUrl = '',
     this.supabaseAnonKey = '',
+    this.cognitoUserPoolId = '',
+    this.cognitoClientId = '',
+    this.cognitoDomain = '',
   });
 
   final Flavor flavor;
@@ -19,6 +22,16 @@ class FlavorConfig {
   final String supabaseAnonKey;
 
   bool get hasSupabase => supabaseUrl.isNotEmpty && supabaseAnonKey.isNotEmpty;
+
+  /// Pool de Cognito de JCV (públicos: viajan en la app, como en CCL).
+  /// Vacíos: no hay login y Encuestas usa el mock.
+  final String cognitoUserPoolId;
+  final String cognitoClientId;
+
+  /// Hosted UI de Cognito (output HostedUiDomain). Vacío: sin Google.
+  final String cognitoDomain;
+
+  bool get hasCognito => cognitoUserPoolId.isNotEmpty && cognitoClientId.isNotEmpty;
 
   /// Muestra la etiqueta "Datos de ejemplo" para que nadie confunda los
   /// números sintéticos con resultados reales en una demo.

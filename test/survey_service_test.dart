@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jcv_app/models/models.dart';
 import 'package:jcv_app/services/supabase/graficas_destacadas.dart';
@@ -14,6 +17,9 @@ GraficaJson g(String variable, String texto, List<String> etiquetas) => {
     };
 
 List<ChartDef> defsOf(String topic) => graficasDestacadas.where((d) => d.topicId == topic).toList();
+
+Encuesta enc(String topic, List<ChartDef> defs) =>
+    (id: 'tec-$topic', topicId: topic, title: Topics.nameOf(topic), version: 1, defs: defs);
 
 const siNo = ['Sí', 'No'];
 const confianza = ['Nada', 'Poca', 'Ni algo, ni poca', 'Algo', 'Mucha', 'No sabe/No contestó'];
@@ -36,7 +42,7 @@ void main() {
   };
 
   test('educación: datos generales, opción múltiple con "Ninguna" y preguntas del AMG', () {
-    final s = SupabaseSurveyService.buildSurvey('educacion-trabajo', defsOf('educacion-trabajo'), educacion,
+    final s = SupabaseSurveyService.buildSurvey(enc('educacion-trabajo', defsOf('educacion-trabajo')), educacion,
         askDemographics: true);
     expect(s.id, 'tec-educacion-trabajo');
     expect(s.questions.map((q) => q.id).take(2), ['EDAD', 'SEXO']);
@@ -60,7 +66,7 @@ void main() {
 
   test('Q_41 viene cortado desde SPSS: usa el texto propio', () {
     final def = graficasDestacadas.firstWhere((d) => d.id == 'salud-mental');
-    final q = SupabaseSurveyService.buildSurvey('salud', [def], {
+    final q = SupabaseSurveyService.buildSurvey(enc('salud', [def]), {
       'Q_41': g('Q_41', 'La salud mental se refiere a tu bienestar emocional. … Considerando es', ['Muy mala', 'Muy buena']),
     }, askDemographics: false).questions.single;
     expect(q.text, '¿Cómo calificarías tu salud mental?');
@@ -69,21 +75,21 @@ void main() {
 
   test('preámbulo del encuestador fuera', () {
     final def = graficasDestacadas.firstWhere((d) => d.id == 'salud-satisfaccion');
-    final q = SupabaseSurveyService.buildSurvey('salud', [def], {
+    final q = SupabaseSurveyService.buildSurvey(enc('salud', [def]), {
       'Q_36': g('Q_36', 'Ahora te voy a preguntar sobre tu salud. Por favor dime, en una escala del 1 al 5, ¿qué tan satisfecha(o) te sientes con tu salud?', ['Nada', 'Mucho']),
     }, askDemographics: false).questions.single;
     expect(q.text, '¿Qué tan satisfecha(o) te sientes con tu salud?');
   });
 
   test('sin datos generales la segunda vez', () {
-    final s = SupabaseSurveyService.buildSurvey('educacion-trabajo', defsOf('educacion-trabajo'), educacion,
+    final s = SupabaseSurveyService.buildSurvey(enc('educacion-trabajo', defsOf('educacion-trabajo')), educacion,
         askDemographics: false);
     expect(s.questions.first.id, isNot('EDAD'));
   });
 
   test('el contexto real se queda en la pregunta; "No válido" no se ofrece', () {
     final def = graficasDestacadas.firstWhere((d) => d.id == 'salud-alcohol');
-    final s = SupabaseSurveyService.buildSurvey('salud', [def], {
+    final s = SupabaseSurveyService.buildSurvey(enc('salud', [def]), {
       'Q_38': g('Q_38', 'En caso de que tomes bebidas alcohólicas, ¿cuántos días a la semana, en promedio las consumes?',
           ['1 día a la semana', 'No válido', 'No consumo bebidas alcohólicas']),
     }, askDemographics: false);
@@ -99,7 +105,7 @@ void main() {
       for (final v in confianzaDef.variables)
         v: g(v, '¿Cuánta confianza tienes en cada una de las siguientes instituciones o grupos? La policía', confianza),
     };
-    final q = SupabaseSurveyService.buildSurvey('comunidad', [confianzaDef], data, askDemographics: false).questions;
+    final q = SupabaseSurveyService.buildSurvey(enc('comunidad', [confianzaDef]), data, askDemographics: false).questions;
     expect(q, hasLength(15));
     expect(q.first.text, '¿Cuánta confianza tienes en la policía?');
 
@@ -109,7 +115,7 @@ void main() {
         v: g(v, 'Ahora te voy a leer una lista de actividades. Por favor dime con qué frecuencia las realizaste en los últimos tres meses Ir al cine',
             ['Nunca', 'Con mucha frecuencia']),
     };
-    final t = SupabaseSurveyService.buildSurvey('tiempo-libre', [tiempo], sinSeparador, askDemographics: false).questions;
+    final t = SupabaseSurveyService.buildSurvey(enc('tiempo-libre', [tiempo]), sinSeparador, askDemographics: false).questions;
     expect(t.first.text, 'Cine');
     expect(t.first.helper, 'En los últimos 3 meses, ¿con qué frecuencia hiciste esto?');
   });
@@ -145,5 +151,31 @@ void main() {
     expect(cuenta.keys, hasLength(8));
     expect(cuenta['comunidad'], 20);
     expect(cuenta['transporte'], 2);
+  });
+
+  test('v1.10: las encuestas de la base son las mismas de Datos (lo que pidió JCV)', () {
+    final sql = File('SQLScripts/v1.10_jcv_encuestas_en_base.sql').readAsStringSync();
+    final filas = RegExp(r"\('(tec-[a-z-]+)', '([a-z-]+)', '([^']+)', \d+, \$j\$(.*?)\$j\$\)", dotAll: true)
+        .allMatches(sql)
+        .map((m) => SupabaseSurveyService.encuestaFromJson(
+            {'id': m[1], 'tema': m[2], 'titulo': m[3], 'version': 1, 'preguntas': jsonDecode(m[4]!)}))
+        .toList();
+    expect(filas.map((e) => e.topicId), [for (final t in Topics.all) t.id]);
+    for (final e in filas) {
+      final datos = defsOf(e.topicId);
+      expect(e.id, 'tec-${e.topicId}');
+      expect(e.title, Topics.nameOf(e.topicId));
+      expect([for (final d in e.defs) d.variables], [for (final d in datos) d.variables], reason: e.id);
+      for (final (i, d) in e.defs.indexed) {
+        final o = datos[i];
+        expect((d.isYesNoGroup, d.surveyStem, d.surveyText, d.surveyHelper, d.exclusive),
+            (o.isYesNoGroup, o.surveyStem, o.surveyText, o.surveyHelper, o.exclusive),
+            reason: '${e.id} #$i');
+        if (d.isGroup) {
+          expect(d.id, o.id);
+          expect(d.labels, o.labels, reason: '${e.id} #$i');
+        }
+      }
+    }
   });
 }

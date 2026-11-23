@@ -14,6 +14,9 @@ Future<void> main() async {
       showMockBanner: true,
       supabaseUrl: dotenv.env['SUPABASE_URL'] ?? '',
       supabaseAnonKey: dotenv.env['SUPABASE_ANON_KEY'] ?? '',
+      cognitoUserPoolId: dotenv.env['COGNITO_USER_POOL_ID'] ?? '',
+      cognitoClientId: dotenv.env['COGNITO_CLIENT_ID'] ?? '',
+      cognitoDomain: dotenv.env['COGNITO_DOMAIN'] ?? '',
     ),
   );
   runApp(const JcvApp());

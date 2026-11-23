@@ -2,7 +2,7 @@
 
 App móvil (Flutter, iOS y Android) del reto ago-dic 2026 con Jalisco Cómo Vamos. Equipo LinuxVSWindows, grupo 502, Tec GDL.
 
-**Estado: fase 2.** Están las 34 pantallas del wireflow con navegación real. **Datos, Encuestas, el asistente (con dictado por voz) y el informe PDF ya son reales**, con la base de la Encuesta de Bienestar de Jóvenes AMG 2026 (Supabase + Claude Haiku). Donar sigue en mock. No hay login.
+**Estado: fase 2.** Están las 34 pantallas del wireflow con navegación real. **Datos, Encuestas, el asistente (con dictado por voz) y el informe PDF ya son reales**, con la base de la Encuesta de Bienestar de Jóvenes AMG 2026 (Supabase + Claude Haiku). Donar sigue en mock. Login con Cognito (correo y contraseña) solo para Encuestas; Datos y el asistente son públicos.
 
 ## Correr la app
 
@@ -101,7 +101,9 @@ Una encuesta por temática con **las mismas preguntas y opciones del AMG** que s
 | 4.5, 4.6 Resultado | `screens/donate/donation_result_screen.dart` |
 | 5.1 a 5.3 Asistente | `screens/assistant/assistant_screen.dart` |
 
-Fuera por ahora, porque dependen del login: 3.1 Acceso, 3.2 Registro bloqueado, 3.3 Verifica tu correo y 4.2 Donativo con sesión.
+| 3.1 Acceso, 3.3 Verifica tu correo | `screens/auth/` (más recuperar contraseña) |
+
+Fuera por ahora: 3.2 Registro bloqueado y 4.2 Donativo con sesión. Google y Apple están en `aws/cognito/cloudformation.yaml` pero falta conectarlos en la app.
 
 ## Probar los estados con los mocks
 
@@ -116,7 +118,9 @@ Los números son sintéticos. En dev aparece la etiqueta "Datos de ejemplo" para
 
 ## Diferencias con el wireflow
 
-- Sin login: Encuestas entra directo a la lista y el texto del aviso ya no menciona el correo.
+- Encuestas pide sesión (v1.09): una vez por persona, no por teléfono. Al cerrar sesión se borran del teléfono edad, sexo, aviso aceptado y borradores. "Eliminar cuenta" está al final de la lista (Apple 5.1.1(v)).
+- Solo correos `@tec.mx` (lambda pre-signup; también con Google). Apple no: oculta el correo.
+- Las encuestas viven en `jcv.encuestas` (v1.10): JCV las activa, cambia o agrega desde el SQL editor sin publicar la app. Solo variables del AMG; el servidor rechaza encuestas inventadas y preguntas de otra encuesta. Formato en `SQLScripts/v1.10_jcv_encuestas_en_base.sql`.
 - La hoja de pago es simulada y no captura tarjeta. En producción la dibuja Stripe.
 - El informe PDF se arma en el teléfono (`services/local/report_pdf.dart`) con las mismas gráficas que la app (donas y anillos) y una página de metodología al final. "Compartir" en el detalle copia el dato y su fuente.
 - Por petición de JCV: sin filtro por municipio (v1.07) y sin mostrar cuántas respuestas hay (ni n, ni total, ni en el chat). Desde v1.08 la API tampoco los regresa: `grafica` y `contar` solo traen banderas (`insuficiente`, `bajo_umbral`, `muestra_pequena`).
@@ -127,7 +131,7 @@ Los números son sintéticos. En dev aparece la etiqueta "Datos de ejemplo" para
 
 ## Siguientes fases
 
-1. Auth con AWS Cognito (pantallas 3.1 a 3.3 y 4.2), con el mismo patrón de CCL: tokens en `flutter_secure_storage`, interceptor de refresh y lambda pre-token-generation.
+1. Login con Google y Apple (Hosted UI + `flutter_web_auth_2`, como CCL). El pool, el pre-signup y el pre-token ya están en `aws/cognito/cloudformation.yaml`.
 2. Donativos con Stripe; con login, los RPC validan al usuario con `validate_caller` como en CCL y las encuestas pasan de "una vez por teléfono" a "una vez por persona".
 3. Stripe: decidir PaymentSheet dentro de la app contra Checkout en el navegador (RF-DON-01 y la regla 3.2.2 de App Store).
 4. Historial del asistente guardado, ligado a la cuenta (con login, para validar dueño y evitar IDOR).

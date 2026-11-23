@@ -109,4 +109,7 @@ class MockSurveyService implements SurveyRepository {
         await simulateNetwork();
         await _store.write(_privacyKey, privacyNoticeVersion);
       });
+
+  @override
+  Future<Result<void>> deleteMyData() async => const Ok(null);
 }

@@ -26,6 +26,10 @@ dependencies:
   # ponytail: image 4.11 usa una función de archive 4.1, pero pdf 3.12 no deja
   # pasar de archive 4.0.x (y pdf 3.13 pide Dart 3.12). Quitar al subir Flutter.
   image: ">=4.0.0 <4.11.0"
+  amazon_cognito_identity_dart_2: ^4.0.1
+  flutter_web_auth_2: ^5.1.0
+  http: ^1.6.0
+  crypto: ^3.0.8
 
 dev_dependencies:
   flutter_lints: ">=5.0.0 <7.0.0"

@@ -7,7 +7,8 @@ import '../../models/chart.dart';
 /// - Varias variables (grupo): una barra por variable con el porcentaje de las
 ///   respuestas en [codes] ("Sí" = [1]; "algo o mucho" = [4, 5]).
 ///
-/// La encuesta del Tec usa la misma lista (mismas preguntas y opciones del AMG):
+/// Las encuestas del Tec viven en jcv.encuestas (v1.10); se sembraron con esta
+/// lista y una prueba revisa que sigan iguales. Los campos survey* son ese formato:
 /// - Grupo Sí/No: una pregunta de opción múltiple con [surveyStem].
 /// - Grupo de escala: una pregunta por inciso. Si [surveyStem] trae `{item}`
 ///   se arma la pregunta con el inciso; si no, el stem va como ayuda.

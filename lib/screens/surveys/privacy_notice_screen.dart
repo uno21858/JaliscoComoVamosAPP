@@ -146,13 +146,6 @@ class _NoticeText extends StatelessWidget {
     color: AppColors.navyDark,
   );
 
-  static const _placeholder = TextStyle(
-    fontSize: 14,
-    height: 21 / 14,
-    fontWeight: FontWeight.w500,
-    color: AppColors.textSecondary,
-  );
-
   static const _heading = TextStyle(
     fontSize: 15,
     height: 20 / 15,
@@ -160,7 +153,7 @@ class _NoticeText extends StatelessWidget {
     color: AppColors.navy,
   );
 
-  Widget _section(String title, String text, {bool placeholder = false}) {
+  Widget _section(String title, String text) {
     return Padding(
       padding: const EdgeInsets.only(top: 16),
       child: Column(
@@ -168,7 +161,7 @@ class _NoticeText extends StatelessWidget {
         children: [
           Semantics(header: true, child: Text(title, style: _heading)),
           const SizedBox(height: 6),
-          Text(text, style: placeholder ? _placeholder : _body),
+          Text(text, style: _body),
         ],
       ),
     );
@@ -191,13 +184,14 @@ class _NoticeText extends StatelessWidget {
         ),
         _section(
           '¿Quién es responsable de tus datos?',
-          '[Nombre y domicilio del responsable, según el aviso oficial de JCV]',
-          placeholder: true,
+          'Jalisco Cómo Vamos A.C., Guadalupe Zuno 2118, Col. Lafayette, C.P. 44150, '
+              'Guadalajara, Jalisco.',
         ),
         _section(
           '¿Qué datos recabamos?',
-          'Solo tus respuestas a la encuesta. No guardamos tu nombre ni tu correo junto '
-              'con ellas.',
+          'Tu correo @tec.mx, para tu cuenta y para que cada encuesta se cuente una sola vez. '
+              'Tu edad y sexo, y tus respuestas. Las respuestas se guardan sin tu correo ni nada '
+              'que las ligue a tu cuenta. Puedes borrar tu cuenta cuando quieras desde Encuestas.',
         ),
         _section(
           '¿Para qué los usamos?',
@@ -206,18 +200,20 @@ class _NoticeText extends StatelessWidget {
         ),
         _section(
           '¿Cómo ejercer tus derechos ARCO?',
-          '[Medio de contacto del aviso oficial]',
-          placeholder: true,
+          'Escribe a contacto@jaliscocomovamos.org con el asunto "Derechos ARCO" para '
+              'acceder, corregir, cancelar u oponerte al uso de tus datos. Tu cuenta y su '
+              'registro también los puedes borrar tú desde Encuestas, en "Eliminar cuenta".',
         ),
         _section(
           '¿Compartimos tus datos?',
-          '[Transferencias, según el aviso oficial de JCV]',
-          placeholder: true,
+          'No vendemos ni compartimos tus datos. Los guardan proveedores que trabajan por '
+              'cuenta de JCV: Amazon Web Services (tu cuenta) y Supabase (las respuestas). '
+              'Los resultados se publican solo como porcentajes de grupo.',
         ),
         _section(
           'Cambios a este aviso',
-          '[Cómo se avisarán los cambios, según el aviso oficial]',
-          placeholder: true,
+          'Si este aviso cambia, te lo mostramos en la app antes de tu siguiente encuesta '
+              'y tienes que aceptarlo de nuevo.',
         ),
         const SizedBox(height: 20),
         Container(

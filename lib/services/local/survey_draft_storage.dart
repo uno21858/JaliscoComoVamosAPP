@@ -35,4 +35,6 @@ class SurveyDraftStorage {
       _store.write(_key(draft.surveyId), jsonEncode(draft.toJson()));
 
   Future<void> delete(String surveyId) => _store.delete(_key(surveyId));
+
+  Future<void> deleteAll() => _store.deletePrefix(_key(''));
 }

@@ -8,44 +8,54 @@ import '../../core/error_sanitizer.dart';
 import '../../core/result.dart';
 import '../../models/models.dart';
 import '../../repositories/survey_repository.dart';
+import '../auth/auth_service.dart';
 import '../local/device_id.dart';
 import '../local/local_store.dart';
+import '../local/survey_draft_storage.dart';
 import 'graficas_destacadas.dart';
 import 'supabase_data_service.dart';
 
 typedef Demographics = ({int edad, String? sexo, String? municipio});
 
-/// Encuestas del Tec: una por temática, con las mismas preguntas y opciones de
-/// la encuesta AMG que salen en Datos (graficasDestacadas). Se guardan con
+/// Una fila de jcv.encuestas_activas(): qué preguntas del AMG lleva la encuesta.
+typedef Encuesta = ({String id, String topicId, String title, int version, List<ChartDef> defs});
+
+/// Encuestas del Tec. Desde v1.10 la lista y sus preguntas vienen de la base
+/// (jcv.encuestas): JCV las cambia sin publicar la app. Textos y opciones son
+/// los del AMG (jcv.preguntas), así se comparan con Jalisco. Se guardan con
 /// jcv.guardar_encuesta como fuente TEC, así la comparativa sale sola.
 ///
 /// Edad y sexo se preguntan una vez y se guardan en el teléfono. El municipio
 /// no se pregunta: JCV pidió no filtrar por municipio.
+///
+/// Desde v1.09 pide sesión: una vez por persona. Qué encuestas ya contestó sale
+/// del servidor (jcv.mis_encuestas), no del teléfono. [_client] manda el token.
 class SupabaseSurveyService implements SurveyRepository {
-  SupabaseSurveyService(this._client, this._store);
+  SupabaseSurveyService(this._client, this._store, this._auth);
 
   final SupabaseClient _client;
   final LocalStore _store;
+  final AuthService _auth;
 
-  static const _completedKey = 'jcv_encuestas_hechas';
+  /// Lista local de v1.05 (por teléfono). Ya no se usa; se borra al salir.
+  static const _legacyCompletedKey = 'jcv_encuestas_hechas';
   static const _privacyKey = 'jcv_aviso_privacidad';
   static const _demographicsKey = 'jcv_demografia';
   static const _timeout = Duration(seconds: 15);
-  static const _version = 1;
   static const _sourceLabel = 'Mismas preguntas que la encuesta AMG 2026';
 
   /// Código de "Ninguna" en las preguntas de opción múltiple.
   static const noneCode = 'NINGUNA';
 
-  static String surveyIdOf(String topicId) => 'tec-$topicId';
+  Future<List<Encuesta>> _activas() async => switch (await _rpc('encuestas_activas', {})) {
+        final List<Object?> rows => [for (final row in rows.whereType<Map<String, dynamic>>()) encuestaFromJson(row)],
+        _ => const [],
+      };
 
-  static String? _topicOf(String surveyId) => surveyId.startsWith('tec-') ? surveyId.substring(4) : null;
-
-  static List<ChartDef> _defsOf(String? topicId) =>
-      graficasDestacadas.where((d) => d.topicId == topicId).toList();
+  Future<Encuesta?> _encuesta(String id) async => (await _activas()).where((e) => e.id == id).firstOrNull;
 
   @override
-  String get privacyNoticeVersion => '2026-10-v1';
+  String get privacyNoticeVersion => '2026-11-v2'; // v2: cuenta con correo (v1.09)
 
   @override
   Future<bool> hasAcceptedPrivacy() async => await _store.read(_privacyKey) == privacyNoticeVersion;
@@ -56,34 +66,32 @@ class SupabaseSurveyService implements SurveyRepository {
 
   @override
   Future<Result<List<SurveySummary>>> getSurveys() => guardResult(() async {
-        final completed = await _completed();
+        final completed = _auth.isSignedIn ? await _completed() : const <String>{};
         final extra = await _demographics() == null ? demographicQuestions.length : 0;
         return [
-          for (final topic in Topics.all)
-            if (_defsOf(topic.id) case final defs when defs.isNotEmpty)
-              SurveySummary(
-                id: surveyIdOf(topic.id),
-                title: topic.name,
-                topicId: topic.id,
-                questionCount: countQuestions(defs) + extra,
-                estimatedMinutes: _minutes(countQuestions(defs) + extra),
-                sourceLabel: _sourceLabel,
-                completed: completed.contains(surveyIdOf(topic.id)),
-              ),
+          for (final e in await _activas())
+            SurveySummary(
+              id: e.id,
+              title: e.title,
+              topicId: e.topicId,
+              questionCount: countQuestions(e.defs) + extra,
+              estimatedMinutes: _minutes(countQuestions(e.defs) + extra),
+              sourceLabel: _sourceLabel,
+              completed: completed.contains(e.id),
+            ),
         ];
       });
 
   @override
   Future<Result<Survey>> getSurvey(String surveyId) => guardResult(() async {
-        final topicId = _topicOf(surveyId);
-        final defs = _defsOf(topicId);
-        if (topicId == null || defs.isEmpty) throw const ValidationError('Esta encuesta ya no está disponible.');
+        final e = await _encuesta(surveyId);
+        if (e == null) throw const ValidationError('Esta encuesta ya no está disponible.');
         // Textos y opciones salen de la base (fuente AMG): iguales al cuestionario de JCV.
         final data = SupabaseDataService.byVariable(await _rpc('graficas', {
-          'p_variables': [for (final d in defs) ...d.variables],
+          'p_variables': [for (final d in e.defs) ...d.variables],
           'p_fuente': 'AMG',
         }));
-        return buildSurvey(topicId, defs, data, askDemographics: await _demographics() == null);
+        return buildSurvey(e, data, askDemographics: await _demographics() == null);
       });
 
   @override
@@ -93,10 +101,9 @@ class SupabaseSurveyService implements SurveyRepository {
     required Map<String, Object> answers,
   }) =>
       guardResult(() async {
-        final defs = _defsOf(_topicOf(surveyId));
-        if (defs.isEmpty || version != _version) throw const ValidationError('La encuesta cambió. Vuelve a abrirla.');
-        final completed = await _completed();
-        if (completed.contains(surveyId)) throw const ConflictError('Ya respondiste esta encuesta. ¡Gracias!');
+        if (!_auth.isSignedIn) throw const ValidationError('Inicia sesión para responder.');
+        final e = await _encuesta(surveyId);
+        if (e == null || e.version != version) throw const ValidationError('La encuesta cambió. Vuelve a abrirla.');
 
         final nuevos = demographicsFrom(answers);
         final demo = nuevos ?? await _demographics();
@@ -108,13 +115,12 @@ class SupabaseSurveyService implements SurveyRepository {
           'p_edad': demo.edad,
           'p_sexo': demo.sexo,
           'p_municipio': demo.municipio,
-          'p_respuestas': answersToCodes(defs, answers),
+          'p_respuestas': answersToCodes(e.defs, answers),
         });
         if (nuevos != null) {
           await _store.write(_demographicsKey,
               jsonEncode({'edad': nuevos.edad, 'sexo': nuevos.sexo, 'municipio': nuevos.municipio}));
         }
-        await _store.write(_completedKey, jsonEncode([...completed, surveyId]));
         if (result == 'ya_contestada') throw const ConflictError('Ya respondiste esta encuesta. ¡Gracias!');
       });
 
@@ -122,6 +128,9 @@ class SupabaseSurveyService implements SurveyRepository {
     try {
       return await _client.schema('jcv').rpc<Object?>(function, params: params).timeout(_timeout);
     } on PostgrestException catch (e) {
+      if (e.code == 'P0401') {
+        throw const ValidationError('Tu sesión terminó. Vuelve a entrar.');
+      }
       if (e.code == 'P0429') {
         throw const ValidationError('Se enviaron muchas encuestas desde esta red. Intenta en un rato.');
       }
@@ -133,13 +142,19 @@ class SupabaseSurveyService implements SurveyRepository {
     }
   }
 
-  Future<Set<String>> _completed() async {
-    try {
-      final raw = await _store.read(_completedKey);
-      return raw == null ? {} : (jsonDecode(raw) as List<Object?>).whereType<String>().toSet();
-    } on Object {
-      return {}; // corrupto: el servidor igual responde "ya_contestada"
+  Future<Set<String>> _completed() async =>
+      switch (await _rpc('mis_encuestas', {})) { final List<Object?> ids => ids.whereType<String>().toSet(), _ => {} };
+
+  @override
+  Future<Result<void>> deleteMyData() => guardResult(() => _rpc('borrar_mis_datos', {}));
+
+  /// Al cerrar sesión: lo que el teléfono guardó de esa persona (edad, sexo,
+  /// aviso aceptado, borradores) no debe verlo quien entre después.
+  static Future<void> forgetLocal(LocalStore store, SurveyDraftStorage drafts) async {
+    for (final key in [_demographicsKey, _privacyKey, _legacyCompletedKey]) {
+      await store.delete(key);
     }
+    await drafts.deleteAll();
   }
 
   Future<Demographics?> _demographics() async {
@@ -188,21 +203,39 @@ class SupabaseSurveyService implements SurveyRepository {
 
   static int _minutes(int questions) => (questions * 12 / 60).ceil().clamp(1, 60);
 
-  static Survey buildSurvey(
-    String topicId,
-    List<ChartDef> defs,
-    Map<String, GraficaJson> data, {
-    required bool askDemographics,
-  }) {
+  /// Fila de jcv.encuestas_activas() -> Encuesta. Formato de cada pregunta en
+  /// SQLScripts/v1.10_jcv_encuestas_en_base.sql (la base ya lo validó).
+  static Encuesta encuestaFromJson(Map<String, dynamic> row) {
+    final tema = row['tema'] as String;
+    List<T> list<T>(Object? v) => (v as List<Object?>? ?? const []).cast<T>();
+    ChartDef def(Map<String, dynamic> p, List<String> variables) => variables.length == 1
+        ? ChartDef(variables.single, tema, '', variables,
+            surveyText: p['text'] as String?, surveyHelper: p['helper'] as String?)
+        : ChartDef.group(p['id'] as String, tema, '', variables,
+            codes: p['multiple'] == true ? const [1] : const [],
+            labels: list<String>(p['labels']),
+            subtitle: null,
+            surveyStem: p['stem'] as String?,
+            exclusive: p['exclusive'] as String?);
+    return (
+      id: row['id'] as String,
+      topicId: tema,
+      title: row['titulo'] as String,
+      version: row['version'] as int,
+      defs: [for (final p in list<Map<String, dynamic>>(row['preguntas'])) def(p, list<String>(p['variables']))],
+    );
+  }
+
+  static Survey buildSurvey(Encuesta e, Map<String, GraficaJson> data, {required bool askDemographics}) {
     final questions = [
       if (askDemographics) ...demographicQuestions,
-      for (final def in defs) ..._questionsFor(def, data),
+      for (final def in e.defs) ..._questionsFor(def, data),
     ];
     return Survey(
-      id: surveyIdOf(topicId),
-      version: _version,
-      title: Topics.nameOf(topicId),
-      topicId: topicId,
+      id: e.id,
+      version: e.version,
+      title: e.title,
+      topicId: e.topicId,
       estimatedMinutes: _minutes(questions.length),
       sourceLabel: _sourceLabel,
       questions: questions,

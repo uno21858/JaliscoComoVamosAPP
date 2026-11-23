@@ -23,6 +23,12 @@ abstract final class AppRoutes {
   static const reportPreview = '/datos/informe/vista-previa';
   static const methodology = '/datos/metodologia';
 
+  // ACCESO (3.1, 3.3). Solo para Encuestas: Datos y el asistente son públicos.
+  static const access = '/acceso';
+  static const register = '$access?registro=1';
+  static const verifyEmail = '$access/verificar';
+  static const resetPassword = '$access/recuperar';
+
   // ENCUESTAS
   static String privacyNotice(String surveyId) => '/encuestas/$surveyId/aviso';
   static String answerSurvey(String surveyId) => '/encuestas/$surveyId/responder';

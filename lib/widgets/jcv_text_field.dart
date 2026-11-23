@@ -25,6 +25,7 @@ class JcvTextField extends StatelessWidget {
     this.outlined = false,
     this.enabled = true,
     this.maxLength,
+    this.obscureText = false,
   });
 
   final TextEditingController controller;
@@ -46,6 +47,9 @@ class JcvTextField extends StatelessWidget {
   final bool outlined;
   final bool enabled;
   final int? maxLength;
+
+  /// Contraseñas.
+  final bool obscureText;
 
   @override
   Widget build(BuildContext context) {
@@ -104,6 +108,9 @@ class JcvTextField extends StatelessWidget {
               onSubmitted: onSubmitted,
               autofillHints: autofillHints,
               maxLength: maxLength,
+              obscureText: obscureText,
+              autocorrect: !obscureText,
+              enableSuggestions: !obscureText,
               style: const TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w600,

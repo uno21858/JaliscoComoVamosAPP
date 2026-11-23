@@ -29,6 +29,17 @@ class LocalStore {
     }
   }
 
+  /// Borra todas las llaves que empiezan con [prefix].
+  Future<void> deletePrefix(String prefix) async {
+    try {
+      for (final key in (await _storage.readAll()).keys.where((k) => k.startsWith(prefix)).toList()) {
+        await _storage.delete(key: key);
+      }
+    } catch (error) {
+      debugPrint('LocalStore.deletePrefix($prefix) falló: $error');
+    }
+  }
+
   Future<void> delete(String key) async {
     try {
       await _storage.delete(key: key);

@@ -9,6 +9,7 @@ import '../../core/core.dart';
 import '../../core/router/app_routes.dart';
 import '../../providers/providers.dart';
 import '../../repositories/repositories.dart';
+import '../../services/auth/auth_service.dart';
 import '../../widgets/widgets.dart';
 
 /// 3.4 Lista de encuestas y 3.13 "Continuar donde te quedaste".
@@ -21,14 +22,27 @@ class SurveyListScreen extends StatefulWidget {
 
 class _SurveyListScreenState extends State<SurveyListScreen> {
   bool _opening = false;
+  AuthService? _auth;
 
   @override
   void initState() {
     super.initState();
+    // Al entrar o salir cambia qué encuestas ya contestó: se recarga.
+    _auth = context.read<AuthService?>()?..addListener(_reload);
     // Fuera del build: load() avisa a los listeners al empezar.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) unawaited(context.read<SurveysProvider>().load(silent: true));
     });
+  }
+
+  void _reload() {
+    if (mounted) unawaited(context.read<SurveysProvider>().load(silent: true));
+  }
+
+  @override
+  void dispose() {
+    _auth?.removeListener(_reload);
+    super.dispose();
   }
 
   /// Abre la encuesta: primero el aviso de privacidad si no se ha aceptado.
@@ -46,9 +60,24 @@ class _SurveyListScreenState extends State<SurveyListScreen> {
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<SurveysProvider>();
+    final auth = context.watch<AuthService?>();
     final resume = provider.resumeItem;
 
     final Widget body = switch (provider.status) {
+      _ when auth != null && !auth.isSignedIn => CenteredStateView(
+          icon: CupertinoIcons.person_crop_circle,
+          title: 'Entra para responder',
+          message: 'Una cuenta por persona: así cada encuesta se cuenta una sola vez. '
+              'Tus respuestas no quedan ligadas a tu correo.',
+          actions: [
+            JcvButton(label: 'Iniciar sesión', onPressed: () => unawaited(context.push(AppRoutes.access))),
+            JcvTextButton(
+              label: 'Crear una cuenta',
+              underline: true,
+              onPressed: () => unawaited(context.push(AppRoutes.register)),
+            ),
+          ],
+        ),
       ViewStatus.loading => const Center(child: CupertinoActivityIndicator(radius: 14)),
       ViewStatus.error || ViewStatus.tooFew => ConnectionErrorView(
           message: provider.errorMessage,
@@ -72,6 +101,10 @@ class _SurveyListScreenState extends State<SurveyListScreen> {
                   _SurveyCard(item: item, onOpen: () => unawaited(_open(item.summary.id))),
                   const SizedBox(height: 12),
                 ],
+              if (auth != null) ...[
+                const SizedBox(height: 12),
+                _AccountCard(auth: auth),
+              ],
             ],
           ),
         ),
@@ -85,6 +118,63 @@ class _SurveyListScreenState extends State<SurveyListScreen> {
             subtitle: 'Responde a tu ritmo, puedes pausar cuando quieras',
           ),
           Expanded(child: body),
+        ],
+      ),
+    );
+  }
+}
+
+/// Sesión: con qué correo entró, salir y borrar la cuenta (Apple 5.1.1(v)).
+class _AccountCard extends StatelessWidget {
+  const _AccountCard({required this.auth});
+
+  final AuthService auth;
+
+  Future<void> _delete(BuildContext context) async {
+    final ok = await showCupertinoDialog<bool>(
+      context: context,
+      builder: (context) => CupertinoAlertDialog(
+        title: const Text('¿Eliminar tu cuenta?'),
+        content: const Text('Se borra tu cuenta y el registro de qué encuestas contestaste. '
+            'Las respuestas se quedan en los resultados porque nunca estuvieron ligadas a ti.'),
+        actions: [
+          CupertinoDialogAction(child: const Text('Cancelar'), onPressed: () => Navigator.pop(context, false)),
+          CupertinoDialogAction(
+            isDestructiveAction: true,
+            child: const Text('Eliminar'),
+            onPressed: () => Navigator.pop(context, true),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !context.mounted) return;
+    final surveys = context.read<SurveyRepository>();
+    final result = await auth.deleteAccount(() async {
+      if (await surveys.deleteMyData() case Err(:final failure)) throw failure.cause ?? failure;
+    });
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(switch (result) { Ok() => 'Tu cuenta se eliminó.', Err(:final failure) => failure.message }),
+    ));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return JcvCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('TU CUENTA', style: AppTextStyles.overline),
+          const SizedBox(height: 6),
+          Text(auth.email ?? '', style: AppTextStyles.cardTitle),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              JcvTextButton(label: 'Cerrar sesión', onPressed: () => unawaited(auth.signOut())),
+              const Spacer(),
+              JcvTextButton(label: 'Eliminar cuenta', onPressed: () => unawaited(_delete(context))),
+            ],
+          ),
         ],
       ),
     );
