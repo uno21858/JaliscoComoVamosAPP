@@ -1,0 +1,301 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: JCV - Cognito User Pool + app client + pre-token lambda (role authenticated para Supabase)
+
+Parameters:
+  Env:
+    Type: String
+    AllowedValues: [dev, prod]
+    Default: dev
+  # Prefijo del Hosted UI: <prefijo>.auth.<region>.amazoncognito.com (único por región).
+  DomainPrefix:
+    Type: String
+  # Vacíos = ese proveedor no se crea. Se pueden agregar después con otro deploy.
+  GoogleClientId:
+    Type: String
+    Default: ""
+  GoogleClientSecret:
+    Type: String
+    Default: ""
+    NoEcho: true
+  AppleServicesId:
+    Type: String
+    Default: ""
+  AppleTeamId:
+    Type: String
+    Default: ""
+  AppleKeyId:
+    Type: String
+    Default: ""
+  ApplePrivateKey:
+    Type: String
+    Default: ""
+    NoEcho: true
+
+Conditions:
+  IsProd: !Equals [!Ref Env, prod]
+  HasGoogle: !Not [!Equals [!Ref GoogleClientId, ""]]
+  HasApple: !Not [!Equals [!Ref AppleServicesId, ""]]
+
+Resources:
+  PreTokenRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: { Service: lambda.amazonaws.com }
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+  # Igual que CCL: sin el claim role Supabase usa anon en vez de authenticated.
+  PreTokenLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub jcv-pre-token-generation-${Env}
+      Runtime: nodejs22.x
+      Handler: index.handler
+      Role: !GetAtt PreTokenRole.Arn
+      Code:
+        ZipFile: |
+          exports.handler = async (event) => {
+            const claims = { claimsToAddOrOverride: { role: 'authenticated' } };
+            event.response = {
+              claimsAndScopeOverrideDetails: {
+                idTokenGeneration: claims,
+                accessTokenGeneration: claims,
+              },
+            };
+            return event;
+          };
+
+  UserPool:
+    Type: AWS::Cognito::UserPool
+    DeletionPolicy: !If [IsProd, Retain, Delete]
+    UpdateReplacePolicy: Retain
+    Properties:
+      UserPoolName: !Sub jcv-${Env}
+      UserPoolTier: ESSENTIALS # V2_0 (claims en access token) lo pide
+      DeletionProtection: !If [IsProd, ACTIVE, INACTIVE]
+      UsernameAttributes: [email]
+      UsernameConfiguration: { CaseSensitive: false }
+      AutoVerifiedAttributes: [email]
+      # Cambiar el correo no surte efecto hasta verificar el nuevo.
+      UserAttributeUpdateSettings:
+        AttributesRequireVerificationBeforeUpdate: [email]
+      Schema:
+        - { Name: email, AttributeDataType: String, Required: true, Mutable: true }
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 8
+          RequireLowercase: true
+          RequireUppercase: true
+          RequireNumbers: true
+          RequireSymbols: false
+          TemporaryPasswordValidityDays: 7
+      MfaConfiguration: "OFF"
+      AccountRecoverySetting:
+        RecoveryMechanisms:
+          - { Name: verified_email, Priority: 1 }
+      EmailConfiguration:
+        EmailSendingAccount: COGNITO_DEFAULT # ponytail: 50 correos/día; SES cuando haya prod real
+      VerificationMessageTemplate:
+        DefaultEmailOption: CONFIRM_WITH_CODE
+      LambdaConfig:
+        PreSignUp: !GetAtt PreSignUpLambda.Arn
+        PreTokenGenerationConfig:
+          LambdaArn: !GetAtt PreTokenLambda.Arn
+          LambdaVersion: V2_0
+
+  PreTokenPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref PreTokenLambda
+      Principal: cognito-idp.amazonaws.com
+      SourceArn: !GetAtt UserPool.Arn
+
+  # Igual que CCL (aws-lambda-pre-signup): liga Google/Apple a una cuenta email
+  # existente con el mismo correo, y bloquea registro email si ya hay cuenta social.
+  PreSignUpRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: { Service: lambda.amazonaws.com }
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+  # Política aparte: si va dentro del rol hay ciclo (pool -> lambda -> rol -> pool).
+  PreSignUpPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: cognito-link
+      Roles: [!Ref PreSignUpRole]
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action: [cognito-idp:ListUsers, cognito-idp:AdminLinkProviderForUser]
+            Resource: !GetAtt UserPool.Arn
+
+  PreSignUpLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub jcv-pre-signup-${Env}
+      Runtime: nodejs22.x
+      Handler: index.handler
+      Role: !GetAtt PreSignUpRole.Arn
+      Timeout: 10
+      Code:
+        ZipFile: |
+          const { CognitoIdentityProviderClient, ListUsersCommand, AdminLinkProviderForUserCommand } =
+            require('@aws-sdk/client-cognito-identity-provider');
+          const cognito = new CognitoIdentityProviderClient({});
+          // Pool case-insensitive: el prefijo llega en minúscula ("google_<sub>").
+          const PROVIDER = { google: 'Google', signinwithapple: 'SignInWithApple', apple: 'SignInWithApple' };
+
+          const usersByEmail = async (poolId, email) =>
+            (await cognito.send(new ListUsersCommand({
+              UserPoolId: poolId,
+              Filter: `email = "${email.replace(/["\\]/g, '')}"`,
+              Limit: 10,
+            }))).Users || [];
+
+          exports.handler = async (event) => {
+            const { triggerSource, userPoolId, userName } = event;
+            const email = event.request.userAttributes?.email;
+
+            // 3.2: solo correos del Tec. El correo verificado prueba que es alumno,
+            // así nadie tiene que decir "quién contesta".
+            if (!/^[^@\s]+@tec\.mx$/i.test(email || '')) throw new Error('TEC_ONLY');
+
+            if (triggerSource === 'PreSignUp_ExternalProvider') {
+              // Solo ligar si Google/Apple verificó el correo Y la cuenta destino está
+              // confirmada y verificada. Si no, alguien que registró el correo ajeno
+              // sin confirmarlo se quedaría con el login social de la víctima.
+              const verified = event.request.userAttributes?.email_verified === 'true';
+              if (email && verified) {
+                try {
+                  const existing = (await usersByEmail(userPoolId, email))
+                    .filter((u) => u.UserStatus === 'CONFIRMED' &&
+                      u.Attributes?.some((a) => a.Name === 'email_verified' && a.Value === 'true'));
+                  if (existing.length > 0) {
+                    const [raw, ...rest] = userName.split('_');
+                    await cognito.send(new AdminLinkProviderForUserCommand({
+                      UserPoolId: userPoolId,
+                      DestinationUser: { ProviderName: 'Cognito', ProviderAttributeValue: existing[0].Username },
+                      SourceUser: {
+                        ProviderName: PROVIDER[raw.toLowerCase()] ?? raw,
+                        ProviderAttributeName: 'Cognito_Subject',
+                        ProviderAttributeValue: rest.join('_'),
+                      },
+                    }));
+                  }
+                } catch (e) {
+                  // Si falla el ligado, peor caso: cuenta duplicada. No tumbar el login.
+                  console.error('link failed', e);
+                }
+              }
+              event.response.autoConfirmUser = true;
+              event.response.autoVerifyEmail = verified;
+            }
+
+            if (triggerSource === 'PreSignUp_SignUp' && email) {
+              const social = (await usersByEmail(userPoolId, email))
+                .filter((u) => u.UserStatus === 'EXTERNAL_PROVIDER');
+              if (social.length > 0) throw new Error('SOCIAL_ACCOUNT_EXISTS');
+            }
+            return event;
+          };
+
+  PreSignUpPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref PreSignUpLambda
+      Principal: cognito-idp.amazonaws.com
+      SourceArn: !GetAtt UserPool.Arn
+
+  UserPoolDomain:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      UserPoolId: !Ref UserPool
+      Domain: !Ref DomainPrefix
+
+  GoogleIdP:
+    Type: AWS::Cognito::UserPoolIdentityProvider
+    Condition: HasGoogle
+    Properties:
+      UserPoolId: !Ref UserPool
+      ProviderName: Google
+      ProviderType: Google
+      ProviderDetails:
+        client_id: !Ref GoogleClientId
+        client_secret: !Ref GoogleClientSecret
+        authorize_scopes: openid email profile
+      AttributeMapping:
+        email: email
+        email_verified: email_verified
+        name: name
+
+  AppleIdP:
+    Type: AWS::Cognito::UserPoolIdentityProvider
+    Condition: HasApple
+    Properties:
+      UserPoolId: !Ref UserPool
+      ProviderName: SignInWithApple
+      ProviderType: SignInWithApple
+      ProviderDetails:
+        client_id: !Ref AppleServicesId
+        team_id: !Ref AppleTeamId
+        key_id: !Ref AppleKeyId
+        private_key: !Ref ApplePrivateKey
+        authorize_scopes: email name
+      AttributeMapping:
+        email: email
+        email_verified: email_verified
+
+  AppClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName: !Sub jcv-app-${Env}
+      UserPoolId: !Ref UserPool
+      GenerateSecret: false # app móvil: el secret no se puede esconder
+      ExplicitAuthFlows: [ALLOW_USER_SRP_AUTH, ALLOW_REFRESH_TOKEN_AUTH]
+      # Hosted UI para Google/Apple, igual que CCL (flutter_web_auth_2 + /oauth2/authorize).
+      AllowedOAuthFlowsUserPoolClient: true
+      AllowedOAuthFlows: [code]
+      AllowedOAuthScopes: [openid, email, profile]
+      CallbackURLs: [jcvapp://callback]
+      LogoutURLs: [jcvapp://signout]
+      SupportedIdentityProviders: !Split
+        - ","
+        - !Join
+          - ","
+          - - COGNITO
+            - !If [HasGoogle, !Ref GoogleIdP, !Ref AWS::NoValue]
+            - !If [HasApple, !Ref AppleIdP, !Ref AWS::NoValue]
+      PreventUserExistenceErrors: ENABLED
+      EnableTokenRevocation: true
+      AccessTokenValidity: 60
+      IdTokenValidity: 60
+      RefreshTokenValidity: 30
+      TokenValidityUnits: { AccessToken: minutes, IdToken: minutes, RefreshToken: days }
+
+Outputs:
+  UserPoolId:
+    Value: !Ref UserPool
+  AppClientId:
+    Value: !Ref AppClient
+  Region:
+    Value: !Ref AWS::Region
+  HostedUiDomain:
+    Value: !Sub https://${UserPoolDomain}.auth.${AWS::Region}.amazoncognito.com
+  # Pegar en Google Cloud (Authorized redirect URI) y en el Services ID de Apple (Return URL).
+  IdpResponseUrl:
+    Value: !Sub https://${UserPoolDomain}.auth.${AWS::Region}.amazoncognito.com/oauth2/idpresponse
